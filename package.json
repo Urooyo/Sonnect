@@ -1,0 +1,35 @@
+{
+  "name": "labetto-dowa",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:unit": "vitest"
+  },
+  "dependencies": {
+    "@material/web": "^2.2.0",
+    "@mdi/font": "^7.4.47",
+    "@supabase/supabase-js": "^2.47.12",
+    "date-fns": "^4.1.0",
+    "firebase": "^11.1.0",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "vuetify": "^3.7.6"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
+    "firebase-tools": "^13.29.1",
+    "jsdom": "^25.0.1",
+    "sass": "^1.83.1",
+    "sass-embedded": "^1.83.1",
+    "vite": "^6.0.5",
+    "vite-plugin-vue-devtools": "^7.6.8",
+    "vite-plugin-vuetify": "^2.0.4",
+    "vitest": "^2.1.8"
+  }
+}

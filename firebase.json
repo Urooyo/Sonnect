@@ -1,0 +1,31 @@
+{
+  "firestore": {
+    "rules": {
+      "posts/{postId}": {
+        "allow read": true,
+        "allow create": "request.auth != null",
+        "allow update": "request.auth != null && (
+          request.auth.uid == resource.data.authorId || 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'reposts', 'replyCount', 'authorName', 'authorHandle'])
+        )",
+        "allow delete": "request.auth != null && request.auth.uid == resource.data.authorId"
+      },
+      "users/{userId}": {
+        "allow read": true,
+        "allow write": "request.auth != null && request.auth.uid == userId"
+      },
+      "notifications/{notificationId}": {
+        "allow read": "request.auth != null && request.auth.uid == resource.data.userId",
+        "allow write": "request.auth != null && request.auth.uid == request.resource.data.userId"
+      }
+    }
+  },
+  "storage": {
+    "rules": {
+      "posts/{userId}/{fileName}": {
+        "allow read": true,
+        "allow write": "request.auth != null && request.auth.uid == userId"
+      }
+    }
+  }
+} 
