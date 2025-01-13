@@ -42,11 +42,13 @@ const deleteLoading = ref(false)
 const deletePassword = ref('')
 const CONFIRM_TEXT = '계정 삭제'
 
-// 테마 토글 함수
-const toggleTheme = () => {
-  theme.global.name.value = isDark.value ? 'light' : 'dark'
-  localStorage.setItem('theme', isDark.value ? 'light' : 'dark')
-}
+const isDark = computed({
+  get: () => theme.global.current.value.dark,
+  set: (value) => {
+    theme.global.name.value = value ? 'dark' : 'light'
+    localStorage.setItem('theme', value ? 'dark' : 'light')
+  }
+})
 
 onMounted(() => {
   if (!auth.currentUser) {
@@ -54,6 +56,11 @@ onMounted(() => {
     return
   }
   displayName.value = auth.currentUser.displayName || ''
+  // 저장된 테마 설정 불러오기
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme) {
+    theme.global.name.value = savedTheme
+  }
 })
 
 const handleUpdateProfile = async () => {
@@ -189,7 +196,6 @@ const handleLogout = async () => {
             <v-switch
               v-model="isDark"
               hide-details
-              @change="toggleTheme"
             ></v-switch>
           </template>
         </v-list-item>

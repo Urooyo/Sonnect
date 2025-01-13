@@ -52,6 +52,12 @@ const vuetify = createVuetify({
   }
 })
 
+// 저장된 테마 �정 불러오기
+const savedTheme = localStorage.getItem('theme')
+if (savedTheme) {
+  vuetify.theme.global.name.value = savedTheme
+}
+
 const app = createApp(App)
 
 app.use(createPinia())
