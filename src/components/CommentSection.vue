@@ -10,13 +10,16 @@ const props = defineProps({
     type: String,
     required: true
   },
+  comments: {
+    type: Array,
+    default: () => []
+  },
   currentUser: {
     type: Object,
     default: null
   }
 })
 
-const comments = ref([])
 const newComment = ref('')
 const loading = ref(false)
 const replyTo = ref(null)
@@ -25,6 +28,7 @@ const editingComment = ref(null)
 const editedContent = ref('')
 const deleteDialog = ref(false)
 const commentToDelete = ref(null)
+const comments = ref([])
 
 const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ko })
@@ -57,6 +61,7 @@ const addComment = async () => {
 const deleteComment = async (commentId) => {
   try {
     await deleteDoc(doc(db, `posts/${props.postId}/comments`, commentId))
+    await loadComments()
   } catch (error) {
     console.error('Error deleting comment:', error)
   }
@@ -72,13 +77,14 @@ const addReply = async (commentId) => {
       createdAt: new Date().toISOString(),
       authorId: props.currentUser.uid,
       authorName: props.currentUser.displayName,
-      authorHandle: props.currentUser.photoURL,
+      authorHandle: props.currentUser.photoURL?.replace('@', '') || 'anonymous',
       replyToId: commentId
     }
     
     await addDoc(collection(db, `posts/${props.postId}/comments`), replyData)
     newComment.value = ''
     replyTo.value = null
+    await loadComments()
   } catch (error) {
     console.error('Error adding reply:', error)
   } finally {
@@ -115,6 +121,7 @@ const saveEdit = async (commentId) => {
       updatedAt: new Date().toISOString()
     })
     editingComment.value = null
+    await loadComments()
   } catch (error) {
     console.error('Error updating comment:', error)
   }
