@@ -129,21 +129,32 @@ const handleRegister = async () => {
     )
     
     // 사용자 프로필 업데이트
-    await updateProfile(user, {
-      displayName: displayName.value,
-      photoURL: `@${handle.value}`
-    })
+    try {
+      await updateProfile(user, {
+        displayName: displayName.value.trim(),
+        photoURL: `@${handle.value.toLowerCase().trim()}`
+      })
+    } catch (profileError) {
+      console.error('Error updating profile:', profileError)
+      // 프로필 업데이트 실패 시에도 계속 진행
+    }
     
     // Firestore에 사용자 정보 저장
     await setDoc(doc(db, 'users', user.uid), {
-      displayName: displayName.value,
-      handle: handle.value.toLowerCase(),
+      displayName: displayName.value.trim(),
+      handle: handle.value.toLowerCase().trim(),
       email: email.value,
       createdAt: new Date().toISOString(),
       role: 'user',
       bio: '',
       warnings: 0
     })
+    
+    // 프로필 정보가 제대로 설정되었는지 확인
+    const userDoc = await getDoc(doc(db, 'users', user.uid))
+    if (!userDoc.exists() || !userDoc.data().displayName) {
+      throw new Error('사용자 프로필 설정 실패')
+    }
     
     emit('update:modelValue', false)
   } catch (e) {
