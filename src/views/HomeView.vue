@@ -10,7 +10,9 @@ import {
   deleteDoc,
   doc,
   increment,
-  getDocs
+  getDocs,
+  arrayUnion,
+  limit
 } from 'firebase/firestore'
 import { db, auth } from '@/firebase'
 import PostCard from '@/components/PostCard.vue'
@@ -19,6 +21,7 @@ const posts = ref([])
 const newPost = ref('')
 const loading = ref(false)
 let unsubscribe = null
+const announcements = ref([])
 
 // 포스트 로드
 onMounted(() => {
@@ -99,9 +102,18 @@ const handleRepost = async (post) => {
       isRepost: true,
       originalPost: {
         id: post.id,
+        authorId: post.authorId,
         authorName: post.authorName,
-        authorHandle: post.authorHandle
+        authorHandle: post.authorHandle,
+        content: post.content,
+        createdAt: post.createdAt
       }
+    })
+    
+    // 원본 포스트의 repost 카운트 증가
+    const postRef = doc(db, 'posts', post.id)
+    await updateDoc(postRef, {
+      reposts: arrayUnion(auth.currentUser.uid)
     })
   } catch (error) {
     console.error('Error creating repost:', error)
@@ -154,6 +166,24 @@ const createPost = async () => {
     loading.value = false
   }
 }
+
+// 최신 공지사항 로드
+const loadAnnouncements = async () => {
+  const q = query(
+    collection(db, 'announcements'),
+    orderBy('createdAt', 'desc'),
+    limit(1)
+  )
+  const snapshot = await getDocs(q)
+  announcements.value = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }))
+}
+
+onMounted(async () => {
+  await loadAnnouncements()
+})
 </script>
 
 <template>
@@ -162,12 +192,12 @@ const createPost = async () => {
       <v-card-text>
         <div class="d-flex">
           <v-avatar size="40" class="mr-3">
-            <v-icon>mdi-account</v-icon>
+            <v-icon>ph-user</v-icon>
           </v-avatar>
           <div class="flex-grow-1">
             <v-textarea
               v-model="newPost"
-              placeholder="무슨 일이 일�나고 있나요?"
+              placeholder="무슨 일이 일나고 있나요?"
               auto-grow
               rows="3"
               hide-details
@@ -178,17 +208,6 @@ const createPost = async () => {
             ></v-textarea>
             
             <div class="d-flex align-center justify-space-between mt-2">
-              <div class="d-flex align-center">
-                <v-btn
-                  icon
-                  variant="text"
-                  size="small"
-                  class="mr-2"
-                >
-                  <v-icon>mdi-image</v-icon>
-                </v-btn>
-              </div>
-              
               <v-btn
                 color="primary"
                 rounded="pill"
@@ -205,6 +224,24 @@ const createPost = async () => {
     </v-card>
 
     <div class="posts-container">
+      <v-card
+        v-if="posts.length === 0"
+        class="d-flex align-center justify-center pa-8 text-center"
+        flat
+      >
+        <div>
+          <v-icon
+            size="64"
+            color="grey-lighten-1"
+            class="mb-4"
+          >
+            mdi-post-outline
+          </v-icon>
+          <div class="text-h6 text-grey-darken-1">아직 아무것도 없어요!</div>
+          <div class="text-body-2 text-grey"> 번째 포스트의 주인공이 되어보세요</div>
+        </div>
+      </v-card>
+
       <PostCard
         v-for="post in posts"
         :key="post.id"
@@ -215,6 +252,24 @@ const createPost = async () => {
         @reply="handleReply"
         @repost="handleRepost"
       />
+
+      <v-card
+        v-if="posts.length > 0"
+        class="d-flex align-center justify-center pa-6 text-center mt-4"
+        flat
+      >
+        <div>
+          <v-icon
+            size="32"
+            color="grey-lighten-1"
+            class="mb-2"
+          >
+            mdi-check-circle
+          </v-icon>
+          <div class="text-body-1 text-grey-darken-1">포스트가 바닥났어요!</div>
+          <div class="text-caption text-grey">나에 다시 확인해보세요</div>
+        </div>
+      </v-card>
     </div>
   </v-container>
 </template>
@@ -234,5 +289,21 @@ const createPost = async () => {
 
 :deep(.v-field__outline) {
   display: none !important;
+}
+
+.v-card.d-flex {
+  background-color: transparent !important;
+  border: 2px dashed rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
+}
+
+.theme--dark .v-card.d-flex {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.v-card.d-flex:hover {
+  border-color: var(--v-primary-base);
+  transform: none;
+  box-shadow: none;
 }
 </style>

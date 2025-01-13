@@ -184,8 +184,13 @@ onUnmounted(() => {
     <v-card v-if="user" class="mb-6">
       <v-card-text>
         <div class="d-flex align-center mb-4">
-          <v-avatar size="96" class="mr-4">
-            <v-icon size="48">mdi-account</v-icon>
+          <v-avatar size="96" :color="$vuetify.theme.current.dark ? 'white' : 'primary'" class="mr-4">
+            <span :class="[
+              'text-h4',
+              $vuetify.theme.current.dark ? 'text-black' : 'text-white'
+            ]">
+              {{ user?.displayName?.[0]?.toUpperCase() || '?' }}
+            </span>
           </v-avatar>
           <div>
             <div class="text-h5">{{ user.displayName }}</div>

@@ -11,27 +11,12 @@ import '@mdi/font/css/materialdesignicons.css'
 import App from './App.vue'
 import router from './router'
 
-// Portage 색상 테마 정의
-const portage = {
-  base: '#7a66ee', // 500
-  lighten5: '#eeefff', // 50
-  lighten4: '#e1e2fe', // 100
-  lighten3: '#c8cafd', // 200
-  lighten2: '#9595f9', // 300
-  lighten1: '#8d84f5', // 400
-  darken1: '#6c4ae1', // 600
-  darken2: '#5e3bc7', // 700
-  darken3: '#4c33a0', // 800
-  darken4: '#41307f', // 900
-}
-
 const vuetify = createVuetify({
   components,
   directives,
   defaults: {
     VBtn: {
       rounded: true,
-      // 또는 더 둥글게: rounded: 'xl'
     }
   },
   theme: {
@@ -39,9 +24,9 @@ const vuetify = createVuetify({
     themes: {
       light: {
         colors: {
-          primary: '#7C4DFF',
-          secondary: '#5CBBF6',
-          accent: '#4CAF50',
+          primary: '#1A1A1A',
+          secondary: '#757575',
+          accent: '#424242',
           error: '#FF5252',
           info: '#2196F3',
           success: '#4CAF50',
@@ -52,9 +37,9 @@ const vuetify = createVuetify({
       },
       dark: {
         colors: {
-          primary: '#9575CD',
-          secondary: '#424242',
-          accent: '#FF4081',
+          primary: '#FFFFFF',
+          secondary: '#BDBDBD',
+          accent: '#9E9E9E',
           error: '#FF5252',
           info: '#2196F3',
           success: '#4CAF50',

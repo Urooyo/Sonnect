@@ -1,26 +1,32 @@
 <script setup>
 import { ref } from 'vue'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { storage, auth } from '@/firebase'
 
 const props = defineProps({
-  postId: String
+  postId: {
+    type: String,
+    required: true
+  }
 })
 
 const emit = defineEmits(['uploaded'])
 const loading = ref(false)
-const progress = ref(0)
 
 const handleFileUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
   loading.value = true
-  const storage = getStorage()
-  const fileRef = storageRef(storage, `posts/${props.postId}/${file.name}`)
-
   try {
-    const snapshot = await uploadBytes(fileRef, file)
-    const url = await getDownloadURL(snapshot.ref)
+    const timestamp = Date.now()
+    const path = `posts/${props.postId}/${timestamp}_${file.name}`
+    const fileRef = storageRef(storage, path)
+
+    await uploadBytes(fileRef, file)
+
+    const url = await getDownloadURL(fileRef)
+
     emit('uploaded', url)
   } catch (error) {
     console.error('Error uploading file:', error)

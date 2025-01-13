@@ -2,11 +2,10 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { formatDistanceToNow, format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { doc, updateDoc, arrayUnion, arrayRemove, collection, onSnapshot, query, orderBy } from 'firebase/firestore'
-import { db } from '@/firebase'
+import { doc, updateDoc, arrayUnion, arrayRemove, collection, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore'
+import { db, auth } from '@/firebase'
 import { parseText } from '@/utils/textParser'
 import { sharePost } from '@/utils/share'
-import MediaUpload from './MediaUpload.vue'
 
 const props = defineProps({
   post: {
@@ -33,7 +32,6 @@ const likeLoading = ref(false)
 const repostLoading = ref(false)
 let repliesUnsubscribe = null
 
-const mediaUrls = ref([])
 const showShareMenu = ref(false)
 
 // 좋아요 상태
@@ -172,10 +170,6 @@ const handleReplyDelete = async (replyId) => {
   }
 }
 
-const handleMediaUpload = (url) => {
-  mediaUrls.value.push(url)
-}
-
 // HTML로 변환된 컨텐츠
 const parsedContent = computed(() => {
   return parseText(props.post.content)
@@ -200,6 +194,41 @@ const handleShare = async () => {
     console.error('Error sharing:', error)
   }
 }
+
+const canDelete = computed(() => {
+  if (!props.currentUser) return false
+  if (props.post.authorId === props.currentUser.uid) return true
+  if (props.currentUser.role === 'admin') return true
+  return false
+})
+
+// 댓글 삭제 함수 추가
+const deleteComment = async (commentId) => {
+  try {
+    const commentRef = doc(db, 'posts', props.post.id, 'comments', commentId)
+    await deleteDoc(commentRef)
+  } catch (error) {
+    console.error('Error deleting comment:', error)
+  }
+}
+
+// 현재 사용자가 댓글 작성자인지 확인하는 함수
+const canDeleteComment = (comment) => {
+  return auth.currentUser && (
+    auth.currentUser.uid === comment.userId || // 댓글 작성자
+    auth.currentUser.uid === props.post.userId // 게시글 작성자
+  )
+}
+
+// 작성자 이니셜 계산
+const authorInitial = computed(() => {
+  return props.post.authorName?.charAt(0)?.toUpperCase() || '?'
+})
+
+// 현재 사용자 이니셜 계산
+const currentUserInitial = computed(() => {
+  return props.currentUser?.displayName?.charAt(0)?.toUpperCase() || '?'
+})
 </script>
 
 <template>
@@ -225,10 +254,10 @@ const handleShare = async () => {
       </v-card>
     </v-dialog>
 
-    <!-- 리트윗 표시 -->
-    <div v-if="post.isRepost" class="repost-header">
-      <v-icon size="small" class="mr-2">mdi-repeat</v-icon>
-      <span class="text-caption">{{ post.authorName }}님이 리트윗했습니다</span>
+    <!-- 리트스트더 -->
+    <div v-if="post.isRepost" class="repost-header mb-2">
+      <v-icon size="small" class="mr-1">mdi-repeat</v-icon>
+      <span>{{ post.authorName }}님이 리트스트했습니다</span>
     </div>
 
     <!-- 메인 포스트 컨텐츠 -->
@@ -238,8 +267,13 @@ const handleShare = async () => {
         :to="`/@${post.authorHandle}`" 
         class="mr-4"
       >
-        <v-avatar size="40">
-          <v-icon>mdi-account</v-icon>
+        <v-avatar size="40" :color="$vuetify.theme.current.dark ? 'white' : 'primary'">
+          <span :class="[
+            'text-h6',
+            $vuetify.theme.current.dark ? 'text-black' : 'text-white'
+          ]">
+            {{ authorInitial }}
+          </span>
         </v-avatar>
       </router-link>
 
@@ -248,21 +282,25 @@ const handleShare = async () => {
         <!-- 작성자 정보 및 메뉴 -->
         <div class="d-flex justify-space-between align-center">
           <div class="d-flex align-center">
-            <router-link 
-              :to="`/@${post.authorHandle}`"
-              class="text-decoration-none"
-            >
-              <span class="font-weight-medium">{{ post.authorName }}</span>
-              <span class="text-caption text-medium-emphasis ml-1">
-                @{{ post.authorHandle }}
-              </span>
-            </router-link>
-            <span class="text-caption text-medium-emphasis mx-1">·</span>
-            <span class="text-caption text-medium-emphasis">
-              {{ formatDate(post.createdAt) }}
-            </span>
+            <!-- 원본 포스트 작성자 정보 -->
+            <div v-if="post.isRepost">
+              <div class="d-flex align-center">
+                <span class="font-weight-bold">{{ post.originalPost.authorName }}</span>
+                <span class="text-grey mx-1">·</span>
+                <span class="text-grey">@{{ post.originalPost.authorHandle }}</span>
+              </div>
+            </div>
+            <!-- 일반 포스트 작성자 정보 -->
+            <div v-else>
+              <span class="font-weight-bold">{{ post.authorName }}</span>
+              <span class="text-grey mx-1">·</span>
+              <span class="text-grey">@{{ post.authorHandle }}</span>
+            </div>
           </div>
-
+          <span class="text-caption text-medium-emphasis mx-1">·</span>
+          <span class="text-caption text-medium-emphasis">
+            {{ formatDate(post.createdAt) }}
+          </span>
           <!-- 더보기 메뉴 -->
           <v-menu location="bottom end">
             <template v-slot:activator="{ props }">
@@ -327,12 +365,6 @@ const handleShare = async () => {
             variant="outlined"
             density="comfortable"
           ></v-textarea>
-          <div class="d-flex align-center mt-2">
-            <MediaUpload
-              :post-id="post.id"
-              @uploaded="handleMediaUpload"
-            />
-          </div>
           <div class="d-flex justify-end mt-2">
             <v-btn
               variant="text"
@@ -419,8 +451,13 @@ const handleShare = async () => {
             <!-- 답글 작성 폼 -->
             <div v-if="currentUser" class="reply-form mb-4">
               <div class="d-flex">
-                <v-avatar size="32" class="mr-3">
-                  <v-icon>mdi-account</v-icon>
+                <v-avatar size="32" :color="$vuetify.theme.current.dark ? 'white' : 'primary'" class="mr-3">
+                  <span :class="[
+                    'text-subtitle-2',
+                    $vuetify.theme.current.dark ? 'text-black' : 'text-white'
+                  ]">
+                    {{ currentUserInitial }}
+                  </span>
                 </v-avatar>
                 <div class="flex-grow-1">
                   <v-textarea
@@ -512,8 +549,7 @@ const handleShare = async () => {
   align-items: center;
   color: rgba(0, 0, 0, 0.6);
   font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-  padding-left: 3.5rem;
+  margin-left: 52px;
 }
 
 :deep(.v-field__outline) {

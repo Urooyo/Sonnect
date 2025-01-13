@@ -1,17 +1,18 @@
 <script setup>
+import SonnectLogo from '@/assets/sonnect.community.svg'
 </script>
 
 <template>
-  <v-container>
-    <v-row>
-      <v-col>
-        <h1>About</h1>
-        <v-card class="mt-4">
-          <v-card-text>
-            About 페이지입니다.
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+  <div class="about">
+    <img :src="SonnectLogo" alt="Sonnect Community" class="logo">
+    <!-- 나머지 컨텐츠... -->
+  </div>
 </template>
+
+<style>
+.logo {
+  max-width: 427px;
+  height: auto;
+  margin: 20px 0;
+}
+</style>

@@ -6,7 +6,7 @@ import {
   updateProfile
 } from 'firebase/auth'
 import { auth } from '@/firebase'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc, getDocs, collection } from 'firebase/firestore'
 import { db } from '@/firebase'
 
 const props = defineProps({
@@ -29,7 +29,7 @@ const loading = ref(false)
 const showPassword = ref(false)
 const passwordRules = [
   v => !!v || '비밀번호를 입력해주세요',
-  v => v?.length >= 16 || '비밀번호는 최소 16자 이상이어야 합니다',
+  v => v?.length >= 6 || '비밀번호는 최소 6자 이상이어야 합니다',
   v => /[A-Z]/.test(v) || '대문자를 포함해야 합니다',
   v => /[a-z]/.test(v) || '소문자를 포함해야 합니다',
   v => /[0-9]/.test(v) || '숫자를 포함해야 합니다',
@@ -91,7 +91,7 @@ const getErrorMessage = (code) => {
     case 'auth/weak-password':
       return '비밀번호가 너무 약합니다.'
     case 'auth/user-disabled':
-      return '해당 사용자 계정이 비활성화되었습니다.'
+      return '해당 사용자 계정이 비활성화되었습니니다.'
     case 'auth/user-not-found':
       return '해당 이메일로 등록된 사용자가 없습니다.'
     case 'auth/wrong-password':
@@ -110,54 +110,63 @@ const handleRegister = async () => {
   error.value = ''
   
   try {
-    // 1. Firebase Auth에 사용자 생성
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email.value,
       password.value
     )
-
-    // 2. 사용자 프로필 업데이트
+    
     await updateProfile(userCredential.user, {
       displayName: displayName.value,
-      photoURL: handle.value.replace(/^@+/, '')
+      photoURL: handle.value ? `@${handle.value}` : null
     })
-
-    // 3. Firestore에 사용자 문서 생성
+    
     await setDoc(doc(db, 'users', userCredential.user.uid), {
-      displayName: displayName.value,
-      handle: handle.value.replace(/^@+/, ''),
       email: email.value,
+      displayName: displayName.value,
+      handle: handle.value,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      role: 'user',
+      warnings: 0,
+      isBanned: false
     })
-
-    emit('update:modelValue', false)
-  } catch (e) {
-    console.error('Error during registration:', e)
-    error.value = getErrorMessage(e.code)
+    
+    dialog.value = false
+  } catch (error) {
+    console.error('Error during registration:', error)
+    error.value = getErrorMessage(error.code)
   } finally {
     loading.value = false
   }
 }
 
 const handleLogin = async () => {
+  if (!form.value.validate()) return
+  
   loading.value = true
+  error.value = ''
+  
   try {
-    await signInWithEmailAndPassword(auth, email.value, password.value)
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email.value,
+      password.value
+    )
+    
     emit('update:modelValue', false)
-  } catch (e) {
-    console.error('Error during login:', e)
-    error.value = getErrorMessage(e.code)
+  } catch (error) {
+    console.error('Error during login:', error)
+    error.value = getErrorMessage(error.code)
   } finally {
     loading.value = false
   }
 }
 
-// 핸들 유효성 �사를 위한 정규식
+// 핸들 유효성 검사를 위한 정규식
 const handleRegex = /^[a-zA-Z0-9]+$/
 
-// 핸들 유효성 �사 규칙
+// 핸들 유효성 검사 규칙
 const handleRules = [
   v => !!v || '핸들을 입력해주세요',
   v => !v.includes(' ') || '공백을 포함할 수 없습니다',
@@ -168,13 +177,30 @@ const handleRules = [
 </script>
 
 <template>
-  <v-dialog 
+  <component 
+    :is="$vuetify.display.smAndDown ? 'v-bottom-sheet' : 'v-dialog'"
     :model-value="modelValue" 
     @update:model-value="emit('update:modelValue', $event)" 
-    max-width="400"
+    :max-width="$vuetify.display.smAndDown ? undefined : '400'"
+    :fullscreen="$vuetify.display.smAndDown"
   >
     <v-card>
-      <v-card-title class="text-h5">
+      <!-- 모바일 헤 -->
+      <v-toolbar
+        v-if="$vuetify.display.smAndDown"
+        color="primary"
+        dark
+      >
+        <v-btn
+          icon
+          @click="emit('update:modelValue', false)"
+        >
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+        <v-toolbar-title>{{ isLogin ? '로그인' : '회원가입' }}</v-toolbar-title>
+      </v-toolbar>
+
+      <v-card-title v-if="!$vuetify.display.smAndDown" class="text-h5">
         {{ isLogin ? '로그인' : '회원가입' }}
       </v-card-title>
       
@@ -183,6 +209,7 @@ const handleRules = [
           ref="form"
           @submit.prevent="handleSubmit"
           v-model="isFormValid"
+          class="mt-4"
         >
           <v-text-field
             v-model="email"
@@ -200,7 +227,7 @@ const handleRules = [
             @click:append-inner="showPassword = !showPassword"
             required
             :rules="passwordRules"
-            placeholder="16자 이상의 비밀번호를 입력하세요"
+            placeholder="16자 이상의 비비밀번호를 입력하세요"
             hint="대소문자, 숫자, 특수문자(!@#$%^&*)를 조합하여 16자 이상"
             persistent-hint
           ></v-text-field>
@@ -252,5 +279,18 @@ const handleRules = [
         </v-form>
       </v-card-text>
     </v-card>
-  </v-dialog>
-</template> 
+  </component>
+</template>
+
+<style scoped>
+/* 모바일에서 바텀시트 스타일 조정 */
+@media (max-width: 599px) {
+  .v-bottom-sheet .v-card {
+    border-radius: 24px 24px 0 0 !important;
+  }
+  
+  .v-bottom-sheet .v-card-text {
+    padding-bottom: 32px;
+  }
+}
+</style> 

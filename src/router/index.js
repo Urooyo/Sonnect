@@ -3,6 +3,8 @@ import { auth } from '@/firebase'
 import HomeView from '../views/HomeView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import { getDoc, doc } from 'firebase/firestore'
+import { db } from '@/firebase'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,6 +24,15 @@ const router = createRouter({
       name: 'settings',
       component: SettingsView,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/AdminView.vue'),
+      meta: { 
+        requiresAuth: true,
+        requiresAdmin: true
+      }
     }
   ]
 })
@@ -54,6 +65,19 @@ router.beforeEach(async (to, from, next) => {
   if (requiresAuth && !isAuthenticated) {
     next('/')
   } else {
+    if (to.matched.some(record => record.meta.requiresAdmin)) {
+      const user = auth.currentUser
+      if (!user) {
+        next('/')
+        return
+      }
+      
+      const userDoc = await getDoc(doc(db, 'users', user.uid))
+      if (!userDoc.exists() || userDoc.data().role !== 'admin') {
+        next('/')
+        return
+      }
+    }
     next()
   }
 })

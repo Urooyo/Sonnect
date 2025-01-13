@@ -6,7 +6,8 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  deleteUser
+  deleteUser,
+  signOut
 } from 'firebase/auth'
 import { auth, db, updateUserInfo, deleteUserAccount } from '@/firebase'
 
@@ -152,163 +153,202 @@ const handleDeleteAccount = async () => {
     deletePassword.value = ''
   }
 }
+
+const handleLogout = async () => {
+  loading.value = true
+  try {
+    await signOut(auth)
+    await router.push('/')
+  } catch (error) {
+    console.error('Error logging out:', error)
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
   <v-container>
-    <h1 class="text-h4 mb-6">설정</h1>
-    
     <v-card class="mb-6">
-      <v-card-title>프로필 설정</v-card-title>
+      <v-card-title>설정</v-card-title>
       <v-card-text>
-        <v-form @submit.prevent="handleUpdateProfile">
-          <v-text-field
-            v-model="displayName"
-            label="표시 이름"
-            required
-            :rules="[v => !!v || '표시 이름을 입력해주세요']"
-          ></v-text-field>
-          
-          <v-btn
-            color="primary"
-            type="submit"
-            :loading="loading"
-            :disabled="!displayName.trim()"
-          >
-            표시 이름 업데이트
-          </v-btn>
-        </v-form>
-      </v-card-text>
-    </v-card>
-    
-    <v-card>
-      <v-card-title>비밀번호 변경</v-card-title>
-      <v-card-text>
-        <v-form 
-          ref="form"
-          @submit.prevent="updateUserPassword"
-        >
-          <v-text-field
-            v-model="currentPassword"
-            label="현재 비밀번호"
-            :type="showCurrentPassword ? 'text' : 'password'"
-            :append-inner-icon="showCurrentPassword ? 'mdi-eye-off' : 'mdi-eye'"
-            @click:append-inner="showCurrentPassword = !showCurrentPassword"
-            required
-          ></v-text-field>
-          
-          <v-text-field
-            v-model="newPassword"
-            label="새 비밀번호"
-            :type="showNewPassword ? 'text' : 'password'"
-            :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
-            @click:append-inner="showNewPassword = !showNewPassword"
-            required
-            :rules="passwordRules"
-            hint="대소문자, 숫자, 특수문자(!@#$%^&*)를 조합하여 16자 이상"
-            persistent-hint
-          ></v-text-field>
-          
-          <v-btn
-            color="primary"
-            type="submit"
-            :loading="loading"
-            :disabled="!currentPassword || !newPassword"
-            class="mt-4"
-          >
-            비밀번호 변경
-          </v-btn>
-        </v-form>
-      </v-card-text>
-    </v-card>
-    
-    <v-card class="mt-6 bg-error-lighten-5">
-      <v-card-title class="text-error">
-        위험 구역
-      </v-card-title>
-      <v-card-text>
-        <p class="text-body-1 mb-4">
-          계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
-        </p>
-        <v-btn
-          color="error"
+        <!-- 로그아웃 섹�� -->
+        <v-card
+          class="mb-6"
           variant="outlined"
-          @click="showDeleteDialog = true"
+          color="error"
         >
-          계정 삭제
-        </v-btn>
+          <v-card-text>
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="text-h6 mb-1">로�아웃</div>
+                <div class="text-body-2 text-medium-emphasis">계정에서 로그아웃합니다</div>
+              </div>
+              <v-btn
+                color="error"
+                @click="handleLogout"
+                :loading="loading"
+              >
+                <v-icon class="mr-2">mdi-logout</v-icon>
+                로그아웃
+              </v-btn>
+            </div>
+          </v-card-text>
+        </v-card>
+        
+        <v-card class="mb-6">
+          <v-card-title>프로필 설정</v-card-title>
+          <v-card-text>
+            <v-form @submit.prevent="handleUpdateProfile">
+              <v-text-field
+                v-model="displayName"
+                label="표시 이름"
+                required
+                :rules="[v => !!v || '표시 이름을 입력해주세요']"
+              ></v-text-field>
+              
+              <v-btn
+                color="primary"
+                type="submit"
+                :loading="loading"
+                :disabled="!displayName.trim()"
+              >
+                표시 이름 업데이트
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+        
+        <v-card>
+          <v-card-title>비밀번호 변경</v-card-title>
+          <v-card-text>
+            <v-form 
+              ref="form"
+              @submit.prevent="updateUserPassword"
+            >
+              <v-text-field
+                v-model="currentPassword"
+                label="현재 비밀번호"
+                :type="showCurrentPassword ? 'text' : 'password'"
+                :append-inner-icon="showCurrentPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                @click:append-inner="showCurrentPassword = !showCurrentPassword"
+                required
+              ></v-text-field>
+              
+              <v-text-field
+                v-model="newPassword"
+                label="새 비밀번호"
+                :type="showNewPassword ? 'text' : 'password'"
+                :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                @click:append-inner="showNewPassword = !showNewPassword"
+                required
+                :rules="passwordRules"
+                hint="대소문자, 숫자, 특수문자(!@#$%^&*)를 조합하여 16자 이상"
+                persistent-hint
+              ></v-text-field>
+              
+              <v-btn
+                color="primary"
+                type="submit"
+                :loading="loading"
+                :disabled="!currentPassword || !newPassword"
+                class="mt-4"
+              >
+                비밀번호 변경
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+        
+        <v-card class="mt-6 bg-error-lighten-5">
+          <v-card-title class="text-error">
+            위험 구역
+          </v-card-title>
+          <v-card-text>
+            <p class="text-body-1 mb-4">
+              계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+            </p>
+            <v-btn
+              color="error"
+              variant="outlined"
+              @click="showDeleteDialog = true"
+            >
+              계정 삭제
+            </v-btn>
+          </v-card-text>
+        </v-card>
+        
+        <v-dialog v-model="showDeleteDialog" max-width="500">
+          <v-card>
+            <v-card-title class="text-error">
+              ⚠️ 계정 영구 삭제
+            </v-card-title>
+            <v-card-text>
+              <p class="text-body-1 mb-4">
+                <strong>이 작업은 되릴 수 없습니다.</strong> 다음과 같은 모든 데이터가 영구적으로 삭제됩니다:
+              </p>
+              <ul class="mb-4">
+                <li>모든 게시물 및 댓글</li>
+                <li>프로필 정보</li>
+                <li>활동 기록</li>
+                <li>기타 모든 정보 관련 데이터</li>
+              </ul>
+              <p class="text-body-1 mb-4">
+                계정을 삭제하려면 아래에 <strong>'{{ CONFIRM_TEXT }}'</strong>를 입력하세요.
+              </p>
+              <v-text-field
+                v-model="deleteConfirmText"
+                label="확인 문구 입력"
+                :rules="[v => v === CONFIRM_TEXT || '정확한 문구를 입력해주세요']"
+                variant="outlined"
+                density="comfortable"
+              ></v-text-field>
+              <v-text-field
+                v-model="deletePassword"
+                label="계정 비밀번호"
+                type="password"
+                variant="outlined"
+                density="comfortable"
+                :rules="[v => !!v || '비밀번호를 입력해주세요']"
+              ></v-text-field>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                variant="text"
+                @click="showDeleteDialog = false"
+              >
+                취소
+              </v-btn>
+              <v-btn
+                color="error"
+                :loading="deleteLoading"
+                :disabled="deleteConfirmText !== CONFIRM_TEXT"
+                @click="handleDeleteAccount"
+              >
+                계정 영구 삭제
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+        
+        <v-alert
+          v-if="error"
+          type="error"
+          class="mt-4"
+        >
+          {{ error }}
+        </v-alert>
+        
+        <v-alert
+          v-if="success"
+          type="success"
+          class="mt-4"
+        >
+          {{ success }}
+        </v-alert>
       </v-card-text>
     </v-card>
-    
-    <v-dialog v-model="showDeleteDialog" max-width="500">
-      <v-card>
-        <v-card-title class="text-error">
-          ⚠️ 계정 영구 삭제
-        </v-card-title>
-        <v-card-text>
-          <p class="text-body-1 mb-4">
-            <strong>이 작업은 되릴 수 없습니다.</strong> 다음과 같은 모든 데이터가 영구적으로 삭제됩니다:
-          </p>
-          <ul class="mb-4">
-            <li>모든 게시물 및 댓글</li>
-            <li>프로필 정보</li>
-            <li>활동 기록</li>
-            <li>기타 모든 정보 관련 데이터</li>
-          </ul>
-          <p class="text-body-1 mb-4">
-            계정을 삭제하려면 아래에 <strong>'{{ CONFIRM_TEXT }}'</strong>를 입력하세요.
-          </p>
-          <v-text-field
-            v-model="deleteConfirmText"
-            label="확인 문구 입력"
-            :rules="[v => v === CONFIRM_TEXT || '정확한 문구를 입력해주세요']"
-            variant="outlined"
-            density="comfortable"
-          ></v-text-field>
-          <v-text-field
-            v-model="deletePassword"
-            label="계정 비밀번호"
-            type="password"
-            variant="outlined"
-            density="comfortable"
-            :rules="[v => !!v || '비밀번호를 입력해주세요']"
-          ></v-text-field>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="text"
-            @click="showDeleteDialog = false"
-          >
-            취소
-          </v-btn>
-          <v-btn
-            color="error"
-            :loading="deleteLoading"
-            :disabled="deleteConfirmText !== CONFIRM_TEXT"
-            @click="handleDeleteAccount"
-          >
-            계정 영구 삭제
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    
-    <v-alert
-      v-if="error"
-      type="error"
-      class="mt-4"
-    >
-      {{ error }}
-    </v-alert>
-    
-    <v-alert
-      v-if="success"
-      type="success"
-      class="mt-4"
-    >
-      {{ success }}
-    </v-alert>
   </v-container>
 </template>
 
