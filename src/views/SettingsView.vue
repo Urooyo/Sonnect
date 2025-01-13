@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useTheme } from 'vuetify'
 import { 
   updateProfile, 
   updatePassword,
@@ -13,7 +14,7 @@ import { auth, db, updateUserInfo, deleteUserAccount } from '@/firebase'
 
 const router = useRouter()
 const form = ref(null)
-const loading = ref(false)
+const theme = useTheme()
 const error = ref('')
 const success = ref('')
 const showCurrentPassword = ref(false)
@@ -40,6 +41,12 @@ const deleteConfirmText = ref('')
 const deleteLoading = ref(false)
 const deletePassword = ref('')
 const CONFIRM_TEXT = '계정 삭제'
+
+// 테마 토글 함수
+const toggleTheme = () => {
+  theme.global.name.value = isDark.value ? 'light' : 'dark'
+  localStorage.setItem('theme', isDark.value ? 'light' : 'dark')
+}
 
 onMounted(() => {
   if (!auth.currentUser) {
@@ -168,10 +175,25 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <v-container>
+  <v-container class="pa-4">
     <v-card class="mb-6">
       <v-card-title>설정</v-card-title>
       <v-card-text>
+        <!-- 테마 설정 -->
+        <v-list-item>
+          <template v-slot:prepend>
+            <v-icon>{{ isDark ? 'ph-moon' : 'ph-sun' }}</v-icon>
+          </template>
+          <v-list-item-title>다크 ��드</v-list-item-title>
+          <template v-slot:append>
+            <v-switch
+              v-model="isDark"
+              hide-details
+              @change="toggleTheme"
+            ></v-switch>
+          </template>
+        </v-list-item>
+        
         <!-- 로그아웃 섹�� -->
         <v-card
           class="mb-6"

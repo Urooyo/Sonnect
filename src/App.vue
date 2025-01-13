@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
-import { useTheme } from 'vuetify'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/firebase'
@@ -15,8 +14,6 @@ const userRole = ref(null) // 사용자 role 저장용
 const isAuthReady = ref(false)
 const showAuthDialog = ref(false)
 const authMode = ref('login') // 'login' 또는 'register'
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 const router = useRouter()
 
 // 사이드바 상태 관리
@@ -27,14 +24,7 @@ const updateDrawer = () => {
   drawer.value = window.innerWidth >= 600
 }
 
-// 테마 토글 함수
-const toggleTheme = () => {
-  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
-  isDark.value = !isDark.value
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
-
-// 페이지 이동 핸들러
+// 테듎이지 이동 핸들러
 const handleNavigation = async (path) => {
   if (router.currentRoute.value.path !== path) {
     await router.push(path)
@@ -180,10 +170,7 @@ const navItems = computed(() => {
   return items
 })
 
-// 로고 색상을 computed로 관리
-const logoColor = computed(() => isDark.value ? '#FFFFFF' : 'rgba(0, 0, 0, 0.87)')
-
-// 관리자 여� 확인용 computed 속성
+// 관리자 여 확인용 computed 속성
 const isAdmin = computed(() => userRole.value === 'admin')
 </script>
 
