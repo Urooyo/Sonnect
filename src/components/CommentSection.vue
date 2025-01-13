@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { collection, addDoc, deleteDoc, doc, updateDoc, query, orderBy, onSnapshot } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore'
 import { db } from '@/firebase'
 
 const props = defineProps({
@@ -10,16 +10,13 @@ const props = defineProps({
     type: String,
     required: true
   },
-  comments: {
-    type: Array,
-    default: () => []
-  },
   currentUser: {
     type: Object,
     default: null
   }
 })
 
+const comments = ref([])
 const newComment = ref('')
 const loading = ref(false)
 const replyTo = ref(null)
@@ -43,12 +40,13 @@ const addComment = async () => {
       createdAt: new Date().toISOString(),
       authorId: props.currentUser.uid,
       authorName: props.currentUser.displayName,
-      authorHandle: props.currentUser.photoURL,
+      authorHandle: props.currentUser.photoURL?.replace('@', '') || 'anonymous',
       replyToId: null
     }
     
     await addDoc(collection(db, `posts/${props.postId}/comments`), commentData)
     newComment.value = ''
+    await loadComments()
   } catch (error) {
     console.error('Error adding comment:', error)
   } finally {
@@ -135,20 +133,26 @@ const handleDelete = async () => {
   commentToDelete.value = null
 }
 
-onMounted(async () => {
-  const commentsRef = collection(db, 'posts', props.postId, 'comments')
-  const q = query(commentsRef, orderBy('createdAt', 'desc'))
+const loadComments = async () => {
+  const commentsRef = collection(db, `posts/${props.postId}/comments`)
+  const q = query(
+    commentsRef,
+    orderBy('createdAt', 'desc')
+  )
   
-  unsubscribe = onSnapshot(q, (snapshot) => {
-    console.log('Comments snapshot:', snapshot.docs.length) // 디버깅용
+  try {
+    const snapshot = await getDocs(q)
     comments.value = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
-    console.log('Loaded comments:', comments.value) // 디버깅용
-  }, (error) => {
+  } catch (error) {
     console.error('Error loading comments:', error)
-  })
+  }
+}
+
+onMounted(async () => {
+  await loadComments()
 })
 </script>
 
