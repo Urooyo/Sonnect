@@ -57,5 +57,15 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  assetsInclude: ['**/*.svg']
+  assetsInclude: ['**/*.svg'],
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage']
+        }
+      }
+    }
+  }
 })
