@@ -364,7 +364,7 @@ const isAdmin = computed(() => userRole.value === 'admin')
         :value="'theme'"
       >
         <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
-        <span class="text-caption">{{ isDark ? '라이트' : '다크' }}</span>
+        <span class="text-caption">{{ isDark ? '밝은' : '어두운' }}</span>
       </v-btn>
       
       <v-btn
@@ -381,7 +381,7 @@ const isAdmin = computed(() => userRole.value === 'admin')
         :value="'register'"
       >
         <v-icon>mdi-account-plus</v-icon>
-        <span class="text-caption">홈원가입</span>
+        <span class="text-caption">구성원 합류</span>
       </v-btn>
       
       <!-- 관리자 메뉴 -->
@@ -530,7 +530,7 @@ body {
   overflow-y: auto;
 }
 
-/* 공지사항 �너 스타일 */
+/* 공지사항 배너 스타일 */
 .announcement-banner {
   font-weight: 500 !important;
   letter-spacing: -0.3px;
@@ -540,7 +540,7 @@ body {
   width: 100%;
 }
 
-/* 공지사항 배너너가 있을 때 네비게이션 드로어 위치 조정 */
+/* 공지사항 배너가 있을 때 네비게이션 드로어 위치 조정 */
 .v-navigation-drawer {
   top: var(--v-layout-top) !important;
 }

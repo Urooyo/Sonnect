@@ -213,7 +213,7 @@ onUnmounted(() => {
       type="error"
       class="mb-6"
     >
-      사용자를 찾을 수 없습니다.
+      바람과 함께 사라진 것 같아요. 아니면, 그냥 찾을 수 없어요.
     </v-alert>
 
     <!-- 포스트 목록 -->
@@ -233,7 +233,7 @@ onUnmounted(() => {
         type="info"
         class="mt-4"
       >
-        아직 작성한 포스트가 없습니다.
+        아직 작성한 포스트가 없어요.
       </v-alert>
     </div>
   </v-container>

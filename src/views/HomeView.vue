@@ -197,7 +197,7 @@ onMounted(async () => {
           <div class="flex-grow-1">
             <v-textarea
               v-model="newPost"
-              placeholder="무슨 일이 일나고 있나요?"
+              placeholder="어떤 걸 포스트하고 싶으세요?!"
               auto-grow
               rows="3"
               hide-details
@@ -237,8 +237,8 @@ onMounted(async () => {
           >
             mdi-post-outline
           </v-icon>
-          <div class="text-h6 text-grey-darken-1">아직 아무것도 없어요!</div>
-          <div class="text-body-2 text-grey"> 번째 포스트의 주인공이 되어보세요</div>
+          <div class="text-h6 text-grey-darken-1">아무것도 없어...</div>
+          <div class="text-body-2 text-grey">포스트로 공간을 가득 채워봐요!</div>
         </div>
       </v-card>
 
@@ -267,7 +267,7 @@ onMounted(async () => {
             mdi-check-circle
           </v-icon>
           <div class="text-body-1 text-grey-darken-1">포스트가 바닥났어요!</div>
-          <div class="text-caption text-grey">나에 다시 확인해보세요</div>
+          <div class="text-caption text-grey">포스트로 공간을 가득 채워봐요.</div>
         </div>
       </v-card>
     </div>

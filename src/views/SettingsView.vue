@@ -27,11 +27,11 @@ const newPassword = ref('')
 // 비밀번호 규칙
 const passwordRules = [
   v => !!v || '비밀번호를 입력해주세요',
-  v => v?.length >= 16 || '비밀번호는 최소 16자 이상이어야 합니다',
-  v => /[A-Z]/.test(v) || '대문자를 포함해야 합니다',
-  v => /[a-z]/.test(v) || '소문자를 포함해야 합니다',
-  v => /[0-9]/.test(v) || '숫자를 포함해야 합니다',
-  v => /[!@#$%^&*]/.test(v) || '특수문자(!@#$%^&*)를 포함해야 합니다'
+  v => v?.length >= 16 || '비밀번호는 최소 16자 이상이어야 해요',
+  v => /[A-Z]/.test(v) || '대문자를 포함해야 해요',
+  v => /[a-z]/.test(v) || '소문자를 포함해야 해요',
+  v => /[0-9]/.test(v) || '숫자를 포함해야 해요',
+  v => /[!@#$%^&*]/.test(v) || '특수문자(!@#$%^&*)를 포함해야 해요'
 ]
 
 // 계정 삭제 관련 상태
@@ -69,10 +69,10 @@ const handleUpdateProfile = async () => {
       handle: auth.currentUser.photoURL
     })
     
-    success.value = '프로필이 업데이트되었습니다.'
+    success.value = '프로필이 업데이트되었어요!'
   } catch (e) {
     console.error('Error updating profile:', e)
-    error.value = '프로필 업데이트 중 오류가 발생했습니다.'
+    error.value = '프로필 업데이트 중 오류가 발생했어요.'
     success.value = ''
   } finally {
     loading.value = false
@@ -99,15 +99,15 @@ const updateUserPassword = async () => {
     // 비밀번호 업데이트
     await updatePassword(auth.currentUser, newPassword.value)
     
-    success.value = '비밀번호가 성공적으로 변경되었습니다.'
+    success.value = '비밀번호가 성공적으로 변경되었어요!'
     currentPassword.value = ''
     newPassword.value = ''
   } catch (e) {
     console.error(e)
     if (e.code === 'auth/wrong-password') {
-      error.value = '현재 비밀번호가 올바르지 않습니다.'
+      error.value = '현재 비밀번호가 올바르지 않아요!'
     } else {
-      error.value = '비밀번호 변경 중 오류가 발생했습니다.'
+      error.value = '비밀번호 변경 중 오류가 발생했어요!'
     }
   } finally {
     loading.value = false
@@ -117,7 +117,7 @@ const updateUserPassword = async () => {
 const handleDeleteAccount = async () => {
   if (deleteConfirmText.value !== CONFIRM_TEXT) return
   if (!deletePassword.value) {
-    error.value = '비밀번호를 입력해주세요.'
+    error.value = '비밀번호를 입력해주세요!'
     return
   }
   
@@ -141,11 +141,11 @@ const handleDeleteAccount = async () => {
   } catch (e) {
     console.error('Error deleting account:', e)
     if (e.code === 'auth/requires-recent-login') {
-      error.value = '보안을 위해 다시 로그인한 후 시도해주세요.'
+      error.value = '보안을 위해 다시 로그인한 후 시도해주세요!'
     } else if (e.code === 'auth/wrong-password') {
-      error.value = '비밀번호가 올바르지 않습니다.'
+      error.value = '비밀번호가 올바르지 않아요!'
     } else {
-      error.value = '계정 삭제 중 오류가 발생했습니다.'
+      error.value = '계정 삭제 중 오류가 발생했어요!'
     }
   } finally {
     deleteLoading.value = false
@@ -172,7 +172,7 @@ const handleLogout = async () => {
     <v-card class="mb-6">
       <v-card-title>설정</v-card-title>
       <v-card-text>
-        <!-- 로그아웃 섹�� -->
+        <!-- 로그아웃 섹션 -->
         <v-card
           class="mb-6"
           variant="outlined"
@@ -181,8 +181,8 @@ const handleLogout = async () => {
           <v-card-text>
             <div class="d-flex align-center justify-space-between">
               <div>
-                <div class="text-h6 mb-1">로�아웃</div>
-                <div class="text-body-2 text-medium-emphasis">계정에서 로그아웃합니다</div>
+                <div class="text-h6 mb-1">로그아웃</div>
+                <div class="text-body-2 text-medium-emphasis">이 계정에서 로그아웃해요.</div>
               </div>
               <v-btn
                 color="error"
@@ -266,7 +266,7 @@ const handleLogout = async () => {
           </v-card-title>
           <v-card-text>
             <p class="text-body-1 mb-4">
-              계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+              계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없어요.
             </p>
             <v-btn
               color="error"
@@ -285,7 +285,7 @@ const handleLogout = async () => {
             </v-card-title>
             <v-card-text>
               <p class="text-body-1 mb-4">
-                <strong>이 작업은 되릴 수 없습니다.</strong> 다음과 같은 모든 데이터가 영구적으로 삭제됩니다:
+                <strong>이 작업은 되릴 수 없어요!!!!!!!!!</strong> 다음과 같은 모든 데이터가 영구적으로 삭제될 거예요!!:
               </p>
               <ul class="mb-4">
                 <li>모든 게시물 및 댓글</li>
@@ -294,7 +294,7 @@ const handleLogout = async () => {
                 <li>기타 모든 정보 관련 데이터</li>
               </ul>
               <p class="text-body-1 mb-4">
-                계정을 삭제하려면 아래에 <strong>'{{ CONFIRM_TEXT }}'</strong>를 입력하세요.
+                계정을 삭제하려면 아래에 <strong>'{{ CONFIRM_TEXT }}'</strong>를 입력해주세요.
               </p>
               <v-text-field
                 v-model="deleteConfirmText"
