@@ -18,6 +18,7 @@ const authMode = ref('login') // 'login' 또는 'register'
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 const router = useRouter()
+const isBanned = ref(false)
 
 // 사이드바 상태 관리
 const drawer = ref(true)
@@ -185,6 +186,18 @@ const logoColor = computed(() => isDark.value ? '#FFFFFF' : 'rgba(0, 0, 0, 0.87)
 
 // 관리자 여� 확인용 computed 속성
 const isAdmin = computed(() => userRole.value === 'admin')
+
+watch(() => auth.currentUser, async (newUser) => {
+  if (newUser) {
+    const userDoc = await getDoc(doc(db, 'users', newUser.uid))
+    if (userDoc.exists()) {
+      isBanned.value = userDoc.data().isBanned || false
+      if (isBanned.value) {
+        router.push('/banned')
+      }
+    }
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -505,7 +518,7 @@ body {
   margin-bottom: 4px;
 }
 
-/* 모모모바일에서 컨테이너 패딩 조정 */
+/* 모모모바일에서 컨테이너 패딩딩 조정 */
 @media (max-width: 600px) {
   .v-container {
     padding-left: 12px !important;

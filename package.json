@@ -1,6 +1,6 @@
 {
   "name": "labetto-dowa",
-  "version": "25.114.7-beta",
+  "version": "25.114.8-beta",
   "private": true,
   "resolutions": {
     "glob": "^10.0.0",
