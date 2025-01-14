@@ -168,16 +168,22 @@ const handleLogout = async () => {
   <v-container>
     <v-row justify="center">
       <v-col cols="12" sm="8" md="6">
-        <!-- 테마 설정 (모든 사용자) -->
+        <!-- 인터페이스 �정 -->
         <v-card class="mb-4">
-          <v-card-title>테마 설정</v-card-title>
+          <v-card-title>인터페이스</v-card-title>
           <v-card-text>
             <v-list>
               <v-list-item>
                 <template v-slot:prepend>
                   <v-icon>mdi-brightness-6</v-icon>
                 </template>
-                <v-list-item-title>어두운 테마</v-list-item-title>
+                <v-list-item-title>
+                  <v-tooltip location="right" text="밝은/어두운 테마를 변경해요">
+                    <template v-slot:activator="{ props }">
+                      <span v-bind="props">테마 변경하기</span>
+                    </template>
+                  </v-tooltip>
+                </v-list-item-title>
                 <template v-slot:append>
                   <v-switch
                     v-model="isDark"
@@ -195,22 +201,59 @@ const handleLogout = async () => {
           v-if="!auth.currentUser"
           type="info"
           class="mb-4"
+          :v-btn rounded="lg"
         >
-          계정 설정을 보면 <v-btn
-            variant="text"
-            color="primary"
-            class="px-2"
-            @click="$emit('login')"
-          >
-            로그인
-          </v-btn>해주세요.
+          계정 설정을 보려면 로그인을 해주세요.
         </v-alert>
 
         <!-- 계정 설정 (로그인한 사용자만) -->
         <template v-if="auth.currentUser">
+          <!-- 계정 섹션 -->
+          <v-card class="mb-4">
+            <v-card-title>계정</v-card-title>
+            <v-card-text>
+              <v-list>
+                <!-- 로그아웃 버튼 -->
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon>mdi-logout</v-icon>
+                  </template>
+                  <v-list-item-title>로그아웃</v-list-item-title>
+                  <template v-slot:append>
+                    <v-btn
+                      color="primary"
+                      variant="text"
+                      @click="handleLogout"
+                      :loading="loading"
+                    >
+                      로그아웃
+                    </v-btn>
+                  </template>
+                </v-list-item>
+                
+                <!-- 계정 삭제 버튼 -->
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon color="error">mdi-delete</v-icon>
+                  </template>
+                  <v-list-item-title class="text-error">계정 삭제</v-list-item-title>
+                  <template v-slot:append>
+                    <v-btn
+                      color="error"
+                      variant="text"
+                      @click="showDeleteDialog = true"
+                    >
+                      계정 삭제
+                    </v-btn>
+                  </template>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+
           <!-- 프로필 설정 -->
           <v-card class="mb-4">
-            <v-card-title>계정 설정</v-card-title>
+            <v-card-title>프로필 설정</v-card-title>
             <v-card-text>
               <v-form @submit.prevent="handleUpdateProfile" ref="form">
                 <v-text-field
@@ -268,23 +311,6 @@ const handleLogout = async () => {
                   비밀번호 변경
                 </v-btn>
               </v-form>
-            </v-card-text>
-          </v-card>
-
-          <!-- 계정 삭제 -->
-          <v-card class="bg-error-lighten-5">
-            <v-card-title>계정 삭제</v-card-title>
-            <v-card-text>
-              <p class="text-body-1 mb-4">
-                계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없어요.
-              </p>
-              <v-btn
-                color="error"
-                variant="outlined"
-                @click="showDeleteDialog = true"
-              >
-                계정 삭제
-              </v-btn>
             </v-card-text>
           </v-card>
 

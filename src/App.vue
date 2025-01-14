@@ -22,6 +22,7 @@ const isBanned = ref(false)
 
 // 사이드바 상태 관리
 const drawer = ref(true)
+const rail = ref(false)  // 사이드바 축소 상태 관리
 
 // 화면 크기 변경 감지 및 사이드바 상태 관리
 const updateDrawer = () => {
@@ -42,7 +43,7 @@ const handleNavigation = async (path) => {
   }
 }
 
-// 공지사항 상�� 추가
+// 공지사항 상태 추가
 const announcements = ref([])
 
 // 공지사항 로드 함수
@@ -60,7 +61,7 @@ const loadAnnouncements = async () => {
   }))
 }
 
-// 사용자 role 정� 가져오기
+// 사용자 role 정보 가져오기
 const fetchUserRole = async (uid) => {
   if (!uid) return
   try {
@@ -74,7 +75,7 @@ const fetchUserRole = async (uid) => {
 }
 
 // 버전 정보
-const version = '25.114.9-beta'
+const version = '25.114.10-beta'
 
 // 알림 상태 관리
 const alert = ref({
@@ -94,7 +95,7 @@ const showAlert = (message, type = 'success', timeout = 3000) => {
   }
 }
 
-// 전역 로딩 �태 관리
+// 전역 로딩 상태 관리
 const loading = ref(false)
 const showLoading = (value = true) => {
   loading.value = value
@@ -219,7 +220,7 @@ const navItems = computed(() => {
 // 로고 색상을 computed로 관리
 const logoColor = computed(() => isDark.value ? '#FFFFFF' : 'rgba(0, 0, 0, 0.87)')
 
-// 관리자 여� 확인용 computed 속성
+// 관리자 여부 확인용 computed 속성
 const isAdmin = computed(() => userRole.value === 'admin')
 
 watch(() => auth.currentUser, async (newUser) => {
@@ -255,13 +256,25 @@ provide('showLoading', showLoading)
 
     <v-navigation-drawer
       v-model="drawer"
+      :rail="rail"
       class="d-none d-sm-flex"
       elevation="1"
       width="280"
       :permanent="$vuetify.display.smAndUp"
     >
+      <!-- 사이드바 축소/확장 버튼 -->
+      <template v-slot:prepend>
+        <v-btn
+          variant="text"
+          icon="mdi-chevron-left"
+          @click.stop="rail = !rail"
+          :class="{ 'rotate-180': rail }"
+          class="toggle-btn"
+        ></v-btn>
+      </template>
+
       <!-- 로고 -->
-      <div class="px-4 py-4">
+      <div class="px-4 py-4" v-show="!rail">
         <router-link 
           to="/" 
           class="d-flex align-center text-decoration-none"
@@ -281,8 +294,12 @@ provide('showLoading', showLoading)
         <!-- 사용자 프로필 표시 -->
         <v-list-item
           v-if="user"
+          :to="`/@${userHandle}`"
           :prepend-avatar="user.photoURL"
           :title="userName"
+          link
+          :class="{ 'square-btn': rail }"
+          :v-btn rounded="xl"
         ></v-list-item>
         
         <!-- 네비게이션 메뉴 -->
@@ -293,8 +310,8 @@ provide('showLoading', showLoading)
           :title="item.title"
           :to="item.to"
           :active="$route.path === item.to"
+          :class="{ 'square-btn': rail }"
           :v-btn rounded="xl"
-          :ripple="true"
         ></v-list-item>
       </v-list>
 
@@ -559,7 +576,7 @@ body {
   }
 }
 
-/* 모바일 인증 다이얼로그그그 스타일 */
+/* 모바일 인증 다이얼로그 스타일 */
 .mobile-auth-dialog .v-bottom-sheet {
   border-radius: 24px 24px 0 0;
 }
@@ -621,7 +638,7 @@ body {
   line-height: 1.25 !important;
 }
 
-/* 전역 알림 스�일 */
+/* 전역 알림 스타일 */
 .global-alert {
   position: fixed !important;
   top: 16px !important;
@@ -635,6 +652,115 @@ body {
 /* 로딩 오버레이 스타일 */
 .v-overlay__scrim {
   backdrop-filter: blur(4px);
+}
+
+/* 사이드바 축소/확장 버튼 애니메이션 */
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.v-btn.rotate-180 {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 축소된 사이드바의 정사각형 버튼 스타일 */
+.v-navigation-drawer--rail .square-btn {
+  width: 44px !important;
+  height: 44px !important;
+  margin: 4px auto !important;
+  padding: 0 !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.v-navigation-drawer--rail .square-btn .v-list-item__content {
+  display: none !important;
+}
+
+.v-navigation-drawer--rail .square-btn .v-list-item__prepend {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin-inline-end: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+
+.v-navigation-drawer--rail .square-btn .v-icon {
+  margin: 0 !important;
+  font-size: 24px !important;
+}
+
+/* 축소된 상태에서 버튼 스타일 추가 */
+.v-navigation-drawer--rail .v-list-item {
+  min-width: 44px !important;
+  max-width: 44px !important;
+  border-radius: 100px !important;
+}
+
+/* 축소된 상태에서 spacer 제거 */
+.v-navigation-drawer--rail .v-list-item__spacer {
+  display: none !important;
+}
+
+/* 축소된 상태에서 오버레이 크기 조정 */
+.v-navigation-drawer--rail .v-list-item__overlay {
+  border-radius: 100px !important;
+}
+
+/* 축소/확장 토글 버튼 스타일 */
+.toggle-btn {
+  width: 44px !important;
+  height: 44px !important;
+  margin: 4px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+}
+
+/* 축소된 상태에서 아바타 크기 조정 */
+.v-navigation-drawer--rail .v-list-item__prepend .v-avatar {
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+
+/* 사이드바 전�� 애니메이션 */
+.v-navigation-drawer {
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.v-navigation-drawer--rail .v-list-item__content {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.v-navigation-drawer:not(.v-navigation-drawer--rail) .v-list-item__content {
+  opacity: 1;
+  transition: opacity 0.3s ease 0.1s;
+}
+
+/* 로고 페이드 애니메이션 */
+.v-navigation-drawer .px-4 {
+  transition: opacity 0.3s ease;
+}
+
+.v-navigation-drawer--rail .px-4 {
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 </style>
 
