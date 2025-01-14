@@ -14,6 +14,8 @@ import { auth, db, updateUserInfo, deleteUserAccount } from '@/firebase'
 
 const showAlert = inject('showAlert')
 const showLoading = inject('showLoading')
+const showLogoutDialog = ref(false)
+const { mobile } = useDisplay()
 
 const router = useRouter()
 const theme = useTheme()
@@ -156,11 +158,17 @@ const handleLogout = async () => {
   try {
     await signOut(auth)
     await router.push('/')
+    showAlert('로그아웃되었어요. 다음에 또 만나요! 👋')
   } catch (error) {
     console.error('Error logging out:', error)
+    showAlert('로그아웃 도중 오류가 발생했어요.', 'error')
   } finally {
     localLoading.value = false
   }
+}
+
+const openLogoutConfirm = () => {
+  showLogoutDialog.value = true
 }
 </script>
 
@@ -168,7 +176,7 @@ const handleLogout = async () => {
   <v-container>
     <v-row justify="center">
       <v-col cols="12" sm="8" md="6">
-        <!-- 인터페이스 �정 -->
+        <!-- 인터페이스 수정 -->
         <v-card class="mb-4">
           <v-card-title>인터페이스</v-card-title>
           <v-card-text>
@@ -223,7 +231,7 @@ const handleLogout = async () => {
                     <v-btn
                       color="primary"
                       variant="text"
-                      @click="handleLogout"
+                      @click="openLogoutConfirm"
                       :loading="loading"
                     >
                       로그아웃
@@ -368,6 +376,52 @@ const handleLogout = async () => {
               </v-card-actions>
             </v-card>
           </v-dialog>
+
+          <!-- 로그아웃 확인 다이얼로그 -->
+          <v-dialog
+            v-model="showLogoutDialog"
+            :fullscreen="mobile"
+            :transition="mobile ? 'dialog-bottom-transition' : 'dialog-transition'"
+            max-width="400"
+            class="logout-dialog"
+          >
+            <v-card :class="{ 'mobile-dialog': mobile }">
+              <v-card-title class="text-center pa-4">
+                <v-icon size="48" color="primary" class="mb-2">mdi-logout</v-icon>
+                <div class="text-h5">정말로 로그아웃 하시겠어요?!?!</div>
+              </v-card-title>
+              
+              <v-card-text class="text-center pb-4">
+                <p class="text-body-1">잠시 쉬었다 오시나요?</p>
+                <p class="text-body-2">언제든 다시 로그인하실 수 있어요.</p>
+              </v-card-text>
+              
+              <v-card-actions class="pa-4">
+                <v-row>
+                  <v-col cols="12" :sm="6">
+                    <v-btn
+                      block
+                      variant="outlined"
+                      @click="showLogoutDialog = false"
+                      class="mb-2 mb-sm-0"
+                    >
+                      아니요
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="12" :sm="6">
+                    <v-btn
+                      block
+                      color="primary"
+                      @click="handleLogout"
+                      :loading="loading"
+                    >
+                      네, 할래요
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
         </template>
       </v-col>
     </v-row>
@@ -377,5 +431,19 @@ const handleLogout = async () => {
 <style scoped>
 .bg-error-lighten-5 {
   background-color: rgb(255, 235, 238) !important;
+}
+
+/* 모바일 다이얼로그 스타일 */
+.mobile-dialog {
+  position: absolute;
+  bottom: 0;
+  margin: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 24px 24px 0 0;
+}
+
+/* 데스크톱 다이얼로그 스타일 */
+.v-dialog:not(.v-dialog--fullscreen) .v-card {
+  border-radius: 16px;
 }
 </style> 
