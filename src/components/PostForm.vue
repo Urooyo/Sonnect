@@ -1,15 +1,39 @@
 <script setup>
-import { ref } from 'vue'
-import { collection, addDoc } from 'firebase/firestore'
+import { ref, onMounted, inject, computed } from 'vue'
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore'
 import { db, auth } from '@/firebase'
+import RulesAgreementDialog from './RulesAgreementDialog.vue'
 
 const emit = defineEmits(['post-created'])
+const showAlert = inject('showAlert')
+const showLoading = inject('showLoading')
 
 const content = ref('')
-const loading = ref(false)
+const localLoading = ref(false)
+const loading = computed({
+  get: () => localLoading.value,
+  set: (value) => {
+    localLoading.value = value
+    showLoading(value)
+  }
+})
+const showRulesDialog = ref(false)
+const hasAgreed = ref(false)
+
+onMounted(async () => {
+  if (auth.currentUser) {
+    const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid))
+    hasAgreed.value = userDoc.data()?.agreedToRules || false
+  }
+})
 
 const createPost = async () => {
   if (!content.value.trim() || !auth.currentUser) return
+  
+  if (!hasAgreed.value) {
+    showRulesDialog.value = true
+    return
+  }
   
   loading.value = true
   try {
@@ -26,10 +50,22 @@ const createPost = async () => {
     })
     content.value = ''
     emit('post-created')
+    showAlert('포스트가 작성되었어요! 🎉')
   } catch (error) {
     console.error('Error creating post:', error)
+    showAlert('포스트 작성 중 오류가 발생했어요.', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+const handleRulesAgreed = () => {
+  hasAgreed.value = true
+}
+
+const handleTextareaFocus = () => {
+  if (!hasAgreed.value) {
+    showRulesDialog.value = true
   }
 }
 </script>
@@ -52,6 +88,7 @@ const createPost = async () => {
             density="comfortable"
             no-resize
             class="post-textarea"
+            @focus="handleTextareaFocus"
           ></v-textarea>
           
           <div class="d-flex align-center justify-space-between mt-2">
@@ -61,6 +98,7 @@ const createPost = async () => {
                 variant="text"
                 size="small"
                 class="mr-2"
+                @click="!hasAgreed && handleTextareaFocus()"
               >
                 <v-icon>mdi-image</v-icon>
               </v-btn>
@@ -71,7 +109,7 @@ const createPost = async () => {
               rounded="pill"
               @click="createPost"
               :loading="loading"
-              :disabled="!content.trim()"
+              :disabled="!content.trim() || !hasAgreed"
             >
               게시하기
             </v-btn>
@@ -80,6 +118,11 @@ const createPost = async () => {
       </div>
     </v-card-text>
   </v-card>
+  
+  <RulesAgreementDialog
+    v-model="showRulesDialog"
+    @agreed="handleRulesAgreed"
+  />
 </template>
 
 <style scoped>

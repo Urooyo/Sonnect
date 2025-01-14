@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
+import { ref, onMounted, watch, onUnmounted, computed, provide } from 'vue'
 import { useTheme } from 'vuetify'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
@@ -71,6 +71,33 @@ const fetchUserRole = async (uid) => {
   } catch (error) {
     console.error('Error fetching user role:', error)
   }
+}
+
+// 버전 정보
+const version = '25.114.9-beta'
+
+// 알림 상태 관리
+const alert = ref({
+  show: false,
+  type: 'success',
+  message: '',
+  timeout: 3000
+})
+
+// 알림 표시 함수
+const showAlert = (message, type = 'success', timeout = 3000) => {
+  alert.value = {
+    show: true,
+    type,
+    message,
+    timeout
+  }
+}
+
+// 전역 로딩 �태 관리
+const loading = ref(false)
+const showLoading = (value = true) => {
+  loading.value = value
 }
 
 onMounted(() => {
@@ -160,22 +187,30 @@ const navItems = computed(() => {
       title: '홈',
       icon: 'mdi-home',
       to: '/'
+    },
+    {
+      title: '설정',
+      icon: 'mdi-cog',
+      to: '/settings'
     }
   ]
 
   if (user.value) {
     items.push(
       {
-        title: `프로필 (@${userHandle.value || 'anonymous'})`,
+        title: '프로필',
         icon: 'mdi-account',
-        to: userHandle.value ? `/@${userHandle.value}` : '/'
-      },
-      {
-        title: '설정',
-        icon: 'mdi-cog',
-        to: '/settings'
+        to: `/@${userHandle.value}`
       }
     )
+
+    if (isAdmin.value) {
+      items.push({
+        title: '관리자',
+        icon: 'mdi-shield-account',
+        to: '/admin'
+      })
+    }
   }
 
   return items
@@ -198,6 +233,10 @@ watch(() => auth.currentUser, async (newUser) => {
     }
   }
 }, { immediate: true })
+
+// provide를 통해 하위 컴포넌트에서 사용할 수 있도록 함
+provide('showAlert', showAlert)
+provide('showLoading', showLoading)
 </script>
 
 <template>
@@ -239,76 +278,30 @@ watch(() => auth.currentUser, async (newUser) => {
 
       <!-- 메인 네비게이션 -->
       <v-list class="px-2">
-        <v-list-item
-          to="/"
-          :active="$route.path === '/'"
-          @click="handleNavigation('/')"
-          rounded="lg"
-        >
-          <template v-slot:prepend>
-            <v-icon>mdi-home</v-icon>
-          </template>
-          <v-list-item-title class="text-body-1">홈</v-list-item-title>
-        </v-list-item>
-
+        <!-- 사용자 프로필 표시 -->
         <v-list-item
           v-if="user"
-          :to="`/@${userHandle || 'anonymous'}`"
-          rounded="lg"
-        >
-          <template v-slot:prepend>
-            <v-avatar :color="$vuetify.theme.current.dark ? 'white' : 'primary'" size="32">
-              <span :class="[
-                'text-h6',
-                $vuetify.theme.current.dark ? 'text-black' : 'text-white'
-              ]">
-                {{ userInitial }}
-              </span>
-            </v-avatar>
-          </template>
-          <v-list-item-title>{{ userName }}</v-list-item-title>
-          <v-list-item-subtitle>@{{ userHandle || 'anonymous' }}</v-list-item-subtitle>
-        </v-list-item>
-
+          :prepend-avatar="user.photoURL"
+          :title="userName"
+        ></v-list-item>
+        
+        <!-- 네비게이션 메뉴 -->
         <v-list-item
-          v-if="user"
-          to="/settings"
-          rounded="lg"
-        >
-          <template v-slot:prepend>
-            <v-icon>mdi-cog</v-icon>
-          </template>
-          <v-list-item-title class="text-body-1">설정</v-list-item-title>
-        </v-list-item>
-
-        <!-- 관리자 메뉴 -->
-        <v-list-item
-          v-if="isAdmin"
-          to="/admin"
-          rounded="lg"
-        >
-          <template v-slot:prepend>
-            <v-icon>mdi-shield-account</v-icon>
-          </template>
-          <v-list-item-title class="text-body-1">관리자</v-list-item-title>
-        </v-list-item>
+          v-for="item in navItems"
+          :key="item.title"
+          :prepend-icon="item.icon"
+          :title="item.title"
+          :to="item.to"
+          :active="$route.path === item.to"
+          :v-btn rounded="xl"
+          :ripple="true"
+        ></v-list-item>
       </v-list>
 
       <v-spacer></v-spacer>
 
       <!-- 하단 영역 -->
       <div class="pa-4">
-        <!-- 테마 토글 -->
-        <v-btn
-          block
-          variant="text"
-          @click="toggleTheme"
-        >
-          <v-icon class="mr-2">
-            {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
-          </v-icon>
-          {{ isDark ? '라이트 모드' : '다크 모드' }}
-        </v-btn>
 
         <!-- 로그인 버튼 -->
         <template v-if="user">
@@ -332,6 +325,12 @@ watch(() => auth.currentUser, async (newUser) => {
           </v-btn>
         </template>
       </div>
+
+      <template v-slot:append>
+        <div class="px-4 py-2 text-caption text-medium-emphasis">
+          v{{ version }}
+        </div>
+      </template>
     </v-navigation-drawer>
 
     <!-- 모바일 하단 네비게이션 -->
@@ -426,6 +425,33 @@ watch(() => auth.currentUser, async (newUser) => {
       :initial-mode="authMode"
       :class="{ 'mobile-auth-dialog': $vuetify.display.smAndDown }"
     />
+
+    <!-- 전역 알림 -->
+    <v-alert
+      v-model="alert.show"
+      :type="alert.type"
+      :timeout="alert.timeout"
+      transition="slide-y-transition"
+      location="top"
+      class="global-alert"
+    >
+      {{ alert.message }}
+    </v-alert>
+
+    <!-- 전역 로딩 오버레이 -->
+    <v-overlay
+      v-model="loading"
+      class="align-center justify-center"
+      persistent
+      scrim="white"
+      :opacity="0.8"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="64"
+      ></v-progress-circular>
+    </v-overlay>
   </v-app>
 </template>
 
@@ -503,7 +529,7 @@ body {
   min-height: 48px !important;
 }
 
-/* 모바일 하단 네비게이션 스타일 */
+/* 모바일 하단 네비게게이션 스타일 */
 .v-bottom-navigation {
   position: fixed !important;
   bottom: 0 !important;
@@ -533,7 +559,7 @@ body {
   }
 }
 
-/* 모바일 인증 다이얼로그 스타일 */
+/* 모바일 인증 다이얼로그그그 스타일 */
 .mobile-auth-dialog .v-bottom-sheet {
   border-radius: 24px 24px 0 0;
 }
@@ -588,6 +614,27 @@ body {
 
 .v-list-item {
   transition: background-color 0.3s ease, color 0.3s ease !important;
+}
+
+.text-caption {
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+}
+
+/* 전역 알림 스�일 */
+.global-alert {
+  position: fixed !important;
+  top: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 90%;
+}
+
+/* 로딩 오버레이 스타일 */
+.v-overlay__scrim {
+  backdrop-filter: blur(4px);
 }
 </style>
 
