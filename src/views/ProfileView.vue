@@ -16,6 +16,8 @@ import {
 } from 'firebase/firestore'
 import { db, auth } from '@/firebase'
 import PostCard from '@/components/PostCard.vue'
+import { formatDistanceToNow, format } from 'date-fns'
+import { ko } from 'date-fns/locale'
 
 const route = useRoute()
 const userHandle = computed(() => route.params.handle)
@@ -167,6 +169,14 @@ const handleRepost = async ({ originalPost, userId }) => {
   }
 }
 
+// 계정 생성일 포맷팅 함수
+const formatCreationDate = (user) => {
+  if (!user?.metadata?.creationTime) return ''
+  
+  const creationDate = new Date(user.metadata.creationTime)
+  return format(creationDate, 'yyyy년 MM월 dd일', { locale: ko })
+}
+
 onMounted(() => {
   loadUserInfo()
 })
@@ -195,6 +205,9 @@ onUnmounted(() => {
           <div>
             <div class="text-h5">{{ user.displayName }}</div>
             <div class="text-subtitle-1 text-medium-emphasis">@{{ user.handle || '' }}</div>
+            <div class="text-caption text-medium-emphasis mt-1">
+              가입일: {{ formatCreationDate(auth.currentUser) }}
+            </div>
           </div>
         </div>
         
