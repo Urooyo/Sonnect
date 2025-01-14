@@ -75,7 +75,7 @@ const fetchUserRole = async (uid) => {
 }
 
 // 버전 정보
-const version = '25.114.12-beta'
+const version = '25.114.13-beta'
 
 // 알림 상태 관리
 const alert = ref({

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, inject } from 'vue'
+import { useDisplay } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { 
