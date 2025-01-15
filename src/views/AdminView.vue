@@ -7,8 +7,19 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const users = ref([])
 const announcements = ref([])
-const newAnnouncement = ref('')
+const newAnnouncement = ref({
+  content: '',
+  active: true,
+  backgroundColor: '#1867C0', // 기본 색상 (Vuetify primary)
+})
+const editingAnnouncement = ref({
+  id: '',
+  content: '',
+  active: true,
+  backgroundColor: '#1867C0',
+})
 const loading = ref(false)
+const showEditDialog = ref(false)
 
 // 권한 체크
 const checkAdminAccess = () => {
@@ -51,34 +62,58 @@ const toggleBan = async (userId) => {
   await loadUsers()
 }
 
-// 공지사항 작성
-const createAnnouncement = async () => {
-  if (!checkAdminAccess()) return
-  if (!newAnnouncement.value.trim()) return
+// 공지사항 추가
+const addAnnouncement = async () => {
+  if (!newAnnouncement.value.content) return
   
-  loading.value = true
   try {
     await addDoc(collection(db, 'announcements'), {
-      content: newAnnouncement.value,
+      content: newAnnouncement.value.content,
+      active: newAnnouncement.value.active,
+      backgroundColor: newAnnouncement.value.backgroundColor,
       createdAt: new Date().toISOString(),
-      active: true
+      updatedAt: new Date().toISOString()
     })
-    newAnnouncement.value = ''
+    
+    newAnnouncement.value = {
+      content: '',
+      active: true,
+      backgroundColor: '#1867C0'
+    }
+    
     await loadAnnouncements()
+    showAlert('공지사항이 추가되었어요.')
   } catch (error) {
-    console.error('Error creating announcement:', error)
-  } finally {
-    loading.value = false
+    console.error('Error adding announcement:', error)
+    showAlert('공지사항 추가 중 오류가 발생했어요.', 'error')
   }
 }
 
-// 공지사항 활성/비활성 토글
-const toggleAnnouncement = async (announcement) => {
-  const announcementRef = doc(db, 'announcements', announcement.id)
-  await updateDoc(announcementRef, {
-    active: !announcement.active
-  })
-  await loadAnnouncements()
+// 공지사항 수정
+const updateAnnouncement = async () => {
+  if (!editingAnnouncement.value.content) return
+  
+  try {
+    await updateDoc(doc(db, 'announcements', editingAnnouncement.value.id), {
+      content: editingAnnouncement.value.content,
+      active: editingAnnouncement.value.active,
+      backgroundColor: editingAnnouncement.value.backgroundColor,
+      updatedAt: new Date().toISOString()
+    })
+    
+    showEditDialog.value = false
+    await loadAnnouncements()
+    showAlert('공지사항이 수정되었어요.')
+  } catch (error) {
+    console.error('Error updating announcement:', error)
+    showAlert('공지사항 수정 중 오류가 발생했어요.', 'error')
+  }
+}
+
+// 공지사항 수정 다이얼로그 열기
+const openEditDialog = (announcement) => {
+  editingAnnouncement.value = { ...announcement }
+  showEditDialog.value = true
 }
 
 // 공지사항 삭제
@@ -97,72 +132,141 @@ onMounted(async () => {
   <div>
     <h1 class="text-h4 mb-6">관리자 페이지</h1>
     
-    <!-- 공지사항 섹션 -->
-    <v-card class="mb-6">
+    <!-- 공지사항 관리 섹션 -->
+    <v-card class="mb-4">
       <v-card-title>공지사항 관리</v-card-title>
       <v-card-text>
         <v-textarea
-          v-model="newAnnouncement"
-          label="새 공지사항"
+          v-model="newAnnouncement.content"
+          label="공지사항 내용"
           rows="3"
           class="mb-4"
-        ></v-textarea>
+        />
+        
+        <div class="d-flex align-center mb-4">
+          <v-switch
+            v-model="newAnnouncement.active"
+            label="활성화"
+            class="mr-4"
+          />
+          <v-color-picker
+            v-model="newAnnouncement.backgroundColor"
+            mode="hex"
+            hide-inputs
+            hide-canvas
+            class="mr-4"
+          />
+          <span class="text-caption">배경색</span>
+        </div>
+
+        <!-- 미리보기 -->
+        <v-system-bar
+          :color="newAnnouncement.backgroundColor"
+          height="48"
+          class="mb-4"
+        >
+          <div class="d-flex align-center justify-center w-100 text-center banner-text">
+            {{ newAnnouncement.content || '공지사항 미리보기' }}
+          </div>
+        </v-system-bar>
+
         <v-btn
           color="primary"
-          :loading="loading"
-          @click="createAnnouncement"
+          block
+          @click="addAnnouncement"
+          :disabled="!newAnnouncement.content"
         >
-          공지사항 작성
+          공지사항 추가
         </v-btn>
-        
-        <!-- 공지사항 목록 -->
-        <v-list class="mt-4">
-          <v-list-item
-            v-for="announcement in announcements"
-            :key="announcement.id"
-            :class="{ 'bg-primary-lighten-5': announcement.active }"
-          >
-            <template v-slot:prepend>
-              <v-icon :color="announcement.active ? 'primary' : 'grey'">
-                {{ announcement.active ? 'ph-megaphone' : 'ph-megaphone-off' }}
-              </v-icon>
-            </template>
-            
-            <v-list-item-title>
-              {{ announcement.content }}
-            </v-list-item-title>
-            
-            <v-list-item-subtitle class="mt-1">
-              {{ new Date(announcement.createdAt).toLocaleString() }}
-            </v-list-item-subtitle>
-            
-            <template v-slot:append>
-              <v-btn
-                icon="mdi-toggle-switch"
-                :color="announcement.active ? 'primary' : 'grey'"
-                variant="text"
-                @click="toggleAnnouncement(announcement)"
-                :title="announcement.active ? '비활성화' : '활성화'"
-              >
-                <v-icon>
-                  {{ announcement.active ? 'mdi-toggle-switch' : 'mdi-toggle-switch-off' }}
-                </v-icon>
-              </v-btn>
-              
-              <v-btn
-                icon="mdi-delete"
-                color="error"
-                variant="text"
-                @click="deleteAnnouncement(announcement.id)"
-                title="삭제"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-          </v-list-item>
-        </v-list>
       </v-card-text>
     </v-card>
+
+    <!-- 공지사항 목록 -->
+    <v-card>
+      <v-card-title>공지사항 목록</v-card-title>
+      <v-list>
+        <v-list-item
+          v-for="announcement in announcements"
+          :key="announcement.id"
+          :subtitle="announcement.content"
+        >
+          <template v-slot:prepend>
+            <v-icon :color="announcement.backgroundColor">
+              mdi-bullhorn
+            </v-icon>
+          </template>
+          
+          <template v-slot:append>
+            <v-btn
+              icon="mdi-pencil"
+              variant="text"
+              size="small"
+              @click="openEditDialog(announcement)"
+            />
+            <v-btn
+              icon="mdi-delete"
+              variant="text"
+              size="small"
+              color="error"
+              @click="deleteAnnouncement(announcement.id)"
+            />
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-card>
+
+    <!-- 수정 다이얼로그 -->
+    <v-dialog v-model="showEditDialog" max-width="500">
+      <v-card>
+        <v-card-title>공지사항 수정</v-card-title>
+        <v-card-text>
+          <v-textarea
+            v-model="editingAnnouncement.content"
+            label="공지사항 내용"
+            rows="3"
+            class="mb-4"
+          />
+          
+          <div class="d-flex align-center mb-4">
+            <v-switch
+              v-model="editingAnnouncement.active"
+              label="활성화"
+              class="mr-4"
+            />
+            <v-color-picker
+              v-model="editingAnnouncement.backgroundColor"
+              mode="hex"
+              hide-inputs
+              hide-canvas
+              class="mr-4"
+            />
+            <span class="text-caption">배경색</span>
+          </div>
+
+          <!-- 미리보기 -->
+          <v-system-bar
+            :color="editingAnnouncement.backgroundColor"
+            height="48"
+            class="mb-4"
+          >
+            <div class="d-flex align-center justify-center w-100 text-center banner-text">
+              {{ editingAnnouncement.content || '공지사항 미리보기' }}
+            </div>
+          </v-system-bar>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showEditDialog = false">취소</v-btn>
+          <v-btn
+            color="primary"
+            @click="updateAnnouncement"
+            :disabled="!editingAnnouncement.content"
+          >
+            수정
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     
     <!-- 사용자 관리 섹션 -->
     <v-card>
@@ -205,5 +309,10 @@ onMounted(async () => {
 
 .bg-primary-lighten-5 {
   background-color: var(--v-primary-lighten-5);
+}
+
+.banner-text {
+  font-size: 16px;
+  line-height: 1.5;
 }
 </style> 

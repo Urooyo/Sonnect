@@ -16,17 +16,52 @@ const isAuthReady = ref(false)
 const showAuthDialog = ref(false)
 const authMode = ref('login') // 'login' 또는 'register'
 const theme = useTheme()
+const themePreference = ref(localStorage.getItem('themePreference') || 'system') // 'system', 'light', 'dark'
+
+// 시스템 테마 감지
+const systemDarkMode = window.matchMedia('(prefers-color-scheme: dark)')
+
+// 테마 업데이트 함수
+const updateTheme = () => {
+  switch (themePreference.value) {
+    case 'system':
+      theme.global.name.value = systemDarkMode.matches ? 'dark' : 'light'
+      break
+    case 'light':
+      theme.global.name.value = 'light'
+      break
+    case 'dark':
+      theme.global.name.value = 'dark'
+      break
+  }
+}
+
+// 시스템 테마 변경 감지
+const handleSystemThemeChange = (e) => {
+  if (themePreference.value === 'system') {
+    theme.global.name.value = e.matches ? 'dark' : 'light'
+  }
+}
+
+// 테마 설정 함수
+const setThemePreference = (preference) => {
+  themePreference.value = preference
+  localStorage.setItem('themePreference', preference)
+  updateTheme()
+}
+
 const isDark = computed(() => theme.global.current.value.dark)
 const router = useRouter()
 const isBanned = ref(false)
 
 // 사이드바 상태 관리
 const drawer = ref(true)
-const rail = ref(false)  // 사이드바 축소 상태 관리
+const rail = ref(false)
 
 // 화면 크기 변경 감지 및 사이드바 상태 관리
-const updateDrawer = () => {
+const updateSidebarState = () => {
   drawer.value = window.innerWidth >= 600
+  rail.value = window.innerWidth <= 900 && window.innerWidth >= 600
 }
 
 // 테마 토글 함수
@@ -75,7 +110,7 @@ const fetchUserRole = async (uid) => {
 }
 
 // 버전 정보
-const version = '25.114.13-beta'
+const version = '25.115.0-beta'
 
 // 알림 상태 관리
 const alert = ref({
@@ -101,15 +136,25 @@ const showLoading = (value = true) => {
   loading.value = value
 }
 
+// 현재 사용자의 handle 계산
+const currentUserHandle = computed(() => {
+  if (!auth.currentUser) return ''
+  return user.value?.handle || ''
+})
+
 onMounted(() => {
-  onAuthStateChanged(auth, async (currentUser) => {
-    user.value = currentUser
-    if (currentUser) {
-      await fetchUserRole(currentUser.uid)
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      // Firestore에서 사용자 정보 가져오기
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
+      if (userDoc.exists()) {
+        user.value = { id: userDoc.id, ...userDoc.data() }
+        userRole.value = userDoc.data().role // role 정보 저장
+      }
     } else {
+      user.value = null
       userRole.value = null
     }
-    isAuthReady.value = true
   })
 
   // 저장된 테마 복원
@@ -119,18 +164,24 @@ onMounted(() => {
     isDark.value = savedTheme === 'dark'
   }
 
-  // 초기 화면 기에 따른 사이드바 상태 설정
-  updateDrawer()
+  // 초기 화면 크기에 따른 사이드바 상태 설정
+  updateSidebarState()
 
   // 화면 크기 변경 이벤트 리스너 등록
-  window.addEventListener('resize', updateDrawer)
+  window.addEventListener('resize', updateSidebarState)
 
   loadAnnouncements()
+
+  // 시스템 테마 변경 감지 리스너 등록
+  systemDarkMode.addEventListener('change', handleSystemThemeChange)
+  // 초기 테마 설정
+  updateTheme()
 })
 
 // 컴포넌트 마운트 시 이벤트 리스너 제거
 onUnmounted(() => {
-  window.removeEventListener('resize', updateDrawer)
+  window.removeEventListener('resize', updateSidebarState)
+  systemDarkMode.removeEventListener('change', handleSystemThemeChange)
 })
 
 const handleLogout = async () => {
@@ -197,14 +248,13 @@ const navItems = computed(() => {
   ]
 
   if (user.value) {
-    items.push(
-      {
-        title: '프로필',
-        icon: 'mdi-account',
-        to: `/@${userHandle.value}`
-      }
-    )
+    items.push({
+      title: '프로필',
+      icon: 'mdi-account',
+      to: user.value.handle ? `/@${user.value.handle}` : '/login'
+    })
 
+    // 관리자인 경우에만 관리자 메뉴 추가
     if (isAdmin.value) {
       items.push({
         title: '관리자',
@@ -238,6 +288,11 @@ watch(() => auth.currentUser, async (newUser) => {
 // provide를 통해 하위 컴포넌트에서 사용할 수 있도록 함
 provide('showAlert', showAlert)
 provide('showLoading', showLoading)
+provide('themePreference', themePreference)
+provide('setThemePreference', setThemePreference)
+provide('version', version)
+provide('user', user)
+provide('openLoginDialog', openLoginDialog)
 </script>
 
 <template>
@@ -245,11 +300,11 @@ provide('showLoading', showLoading)
     <!-- 공지사항 배너 -->
     <v-system-bar
       v-if="announcements.length > 0"
-      color="primary"
+      :color="announcements[0].backgroundColor"
       height="48"
       class="announcement-banner"
     >
-      <div class="d-flex align-center justify-center w-100 text-center">
+      <div class="d-flex align-center justify-center w-100 text-center banner-text">
         {{ announcements[0].content }}
       </div>
     </v-system-bar>
@@ -294,9 +349,9 @@ provide('showLoading', showLoading)
         <!-- 사용자 프로필 표시 -->
         <v-list-item
           v-if="user"
-          :to="`/@${userHandle}`"
+          :to="user ? `/@${user.handle}` : '/login'"
           :prepend-avatar="user.photoURL"
-          :title="userName"
+          :title="user.displayName"
           link
           :class="{ 'square-btn': rail }"
           :v-btn rounded="xl"
@@ -352,76 +407,35 @@ provide('showLoading', showLoading)
 
     <!-- 모바일 하단 네비게이션 -->
     <v-bottom-navigation
-      v-if="$vuetify.display.smAndDown"
+      v-model="activeTab"
       grow
+      class="d-md-none"
     >
-      <v-btn
-        :to="'/'"
-        :value="'/'"
-      >
+      <v-btn to="/">
         <v-icon>mdi-home</v-icon>
-        <span class="text-caption">홈</span>
+        홈
       </v-btn>
-      
-      <v-btn
-        v-if="user"
-        :to="`/@${userHandle || 'anonymous'}`"
-        :value="'profile'"
-      >
-        <v-avatar :color="$vuetify.theme.current.dark ? 'white' : 'primary'" size="24">
-          <span :class="[
-            'text-caption',
-            $vuetify.theme.current.dark ? 'text-black' : 'text-white'
-          ]">
-            {{ userInitial }}
-          </span>
-        </v-avatar>
-        <span class="text-caption">프로필</span>
-      </v-btn>
-      
-      <v-btn
-        v-if="user"
-        :to="'/settings'"
-        :value="'settings'"
-      >
+
+      <v-btn to="/settings">
         <v-icon>mdi-cog</v-icon>
-        <span class="text-caption">설정</span>
+        설정
       </v-btn>
-      
-      <v-btn
-        @click="toggleTheme"
-        :value="'theme'"
-      >
-        <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
-        <span class="text-caption">{{ isDark ? '밝은' : '어두운' }}</span>
-      </v-btn>
-      
-      <v-btn
-        v-if="!user"
-        @click="openLoginDialog"
-        :value="'login'"
-      >
-        <v-icon>mdi-login</v-icon>
-        <span class="text-caption">로그인</span>
-      </v-btn>
-      <v-btn
-        v-if="!user"
-        @click="openRegisterDialog"
-        :value="'register'"
-      >
-        <v-icon>mdi-account-plus</v-icon>
-        <span class="text-caption">구성원 합류</span>
-      </v-btn>
-      
-      <!-- 관리자 메뉴 -->
-      <v-btn
-        v-if="isAdmin"
-        :to="'/admin'"
-        :value="'admin'"
-      >
-        <v-icon>mdi-shield-account</v-icon>
-        <span class="text-caption">관리자</span>
-      </v-btn>
+
+      <!-- 로그인한 경우 프로필 버튼 -->
+      <template v-if="user">
+        <v-btn :to="`/@${user.handle}`">
+          <v-icon>mdi-account</v-icon>
+          프로필
+        </v-btn>
+      </template>
+
+      <!-- 비로그인 경우 로그인 버튼 -->
+      <template v-else>
+        <v-btn @click="openLoginDialog">
+          <v-icon>mdi-login</v-icon>
+          로그인
+        </v-btn>
+      </template>
     </v-bottom-navigation>
 
     <v-main>
@@ -738,7 +752,7 @@ body {
 }
 
 
-/* 사이드바 전�� 애니메이션 */
+/* 사이드바 전 애니메이션 */
 .v-navigation-drawer {
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -761,6 +775,11 @@ body {
 .v-navigation-drawer--rail .px-4 {
   opacity: 0;
   transition: opacity 0.3s ease;
+}
+
+.banner-text {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
 }
 </style>
 

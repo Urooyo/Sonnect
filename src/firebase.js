@@ -76,30 +76,17 @@ const deleteUserAccount = async (user) => {
 }
 
 // 사용자 정보 업데이트 함수
-const updateUserInfo = async (user, newInfo) => {
+const updateUserInfo = async (uid, data) => {
   try {
-    // Firebase Auth 프로필 업데이트
-    await updateProfile(user, {
-      displayName: newInfo.displayName,
-      photoURL: newInfo.handle ? `@${newInfo.handle}` : null
-    })
-
-    // Firestore 사용자 문서 업데이트
-    const userRef = doc(db, 'users', user.uid)
+    const userRef = doc(db, 'users', uid)
     await updateDoc(userRef, {
-      displayName: newInfo.displayName,
-      handle: newInfo.handle,
-      bio: newInfo.bio,
+      ...data,
       updatedAt: new Date().toISOString()
     })
-
-    return { success: true }
+    return true
   } catch (error) {
-    console.error('사용자 정보 업데이트 중 오류 발생:', error)
-    return {
-      success: false,
-      error: error.message
-    }
+    console.error('Error updating user info:', error)
+    throw error
   }
 }
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, inject } from 'vue'
 import { 
   collection, 
   query, 
@@ -16,6 +16,8 @@ import {
 } from 'firebase/firestore'
 import { db, auth } from '@/firebase'
 import PostCard from '@/components/PostCard.vue'
+
+const showAlert = inject('showAlert')
 
 const posts = ref([])
 const newPost = ref('')
@@ -85,38 +87,31 @@ const handleReply = async ({ postId, content }) => {
   }
 }
 
-// 리트윗 핸들러
-const handleRepost = async (post) => {
+// 리포스트 핸들러
+const handleRepost = async (repostData) => {
   if (!auth.currentUser) return
   
   try {
-    await addDoc(collection(db, 'posts'), {
-      content: post.content,
+    // 모든 필수 필드가 있는지 확인
+    const validatedData = {
+      ...repostData,
+      content: repostData.content || '',
       authorId: auth.currentUser.uid,
       authorName: auth.currentUser.displayName,
-      authorHandle: auth.currentUser.photoURL,
+      authorHandle: auth.currentUser.photoURL?.replace('@', ''),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       likes: [],
       reposts: [],
       replyCount: 0,
-      isRepost: true,
-      originalPost: {
-        id: post.id,
-        authorId: post.authorId,
-        authorName: post.authorName,
-        authorHandle: post.authorHandle,
-        content: post.content,
-        createdAt: post.createdAt
-      }
-    })
+      isRepost: true
+    }
     
-    // 원본 포스트의 repost 카운트 증가
-    const postRef = doc(db, 'posts', post.id)
-    await updateDoc(postRef, {
-      reposts: arrayUnion(auth.currentUser.uid)
-    })
+    await addDoc(collection(db, 'posts'), validatedData)
+    showAlert('게시물을 리포스트했어요.')
   } catch (error) {
     console.error('Error creating repost:', error)
+    showAlert('리포스트 중 오류가 발생했어요.', 'error')
   }
 }
 
@@ -251,6 +246,7 @@ onMounted(async () => {
         @delete="handleDeletePost"
         @reply="handleReply"
         @repost="handleRepost"
+        class="mb-1"
       />
 
       <v-card

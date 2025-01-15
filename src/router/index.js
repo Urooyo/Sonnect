@@ -6,6 +6,7 @@ import SettingsView from '../views/SettingsView.vue'
 import { getDoc, doc } from 'firebase/firestore'
 import { db } from '@/firebase'
 import BannedUserView from '@/components/BannedUserView.vue'
+import PostView from '@/views/PostView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/banned',
       name: 'banned',
       component: BannedUserView
+    },
+    {
+      path: '/post/:id',
+      name: 'post',
+      component: PostView
     }
   ]
 })

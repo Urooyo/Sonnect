@@ -26,6 +26,9 @@ const user = ref(null)
 const posts = ref([])
 let unsubscribe = null
 
+const postCount = ref(0)
+const repostCount = ref(0)
+
 // 사용자 정보 로드
 const loadUserInfo = async () => {
   console.log('Searching for user with handle:', userHandle.value)
@@ -33,16 +36,14 @@ const loadUserInfo = async () => {
   try {
     const usersRef = collection(db, 'users')
     const cleanHandle = userHandle.value.replace(/^@+/, '')
-    console.log('Cleaned handle:', cleanHandle)
     
     const q = query(usersRef, where('handle', '==', cleanHandle))
     const snapshot = await getDocs(q)
     
-    console.log('Query results:', snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-    
     if (!snapshot.empty) {
       user.value = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() }
       console.log('Found user:', user.value)
+      await loadPostCounts() // 사용자 정보 로드 후 카운트 계산
       loadUserPosts()
     } else {
       console.log('No user found with handle:', cleanHandle)
@@ -177,6 +178,29 @@ const formatCreationDate = (user) => {
   return format(creationDate, 'yyyy년 MM월 dd일', { locale: ko })
 }
 
+// 포스트 및 리포스트 수 계산
+const loadPostCounts = async () => {
+  if (!user.value?.id) return
+  
+  try {
+    const q = query(
+      collection(db, 'posts'),
+      where('authorId', '==', user.value.id)
+    )
+    const snapshot = await getDocs(q)
+    
+    // 일반 포스트와 리포스트 구분하여 카운트
+    postCount.value = snapshot.docs.filter(doc => !doc.data().isRepost).length
+    repostCount.value = snapshot.docs.filter(doc => doc.data().isRepost).length
+  } catch (error) {
+    console.error('Error loading post counts:', error)
+  }
+}
+
+// 팔로워/팔로잉 수를 computed로 변경
+const followerCount = computed(() => user.value?.followers?.length || 0)
+const followingCount = computed(() => user.value?.following?.length || 0)
+
 onMounted(() => {
   loadUserInfo()
 })
@@ -211,10 +235,27 @@ onUnmounted(() => {
           </div>
         </div>
         
+        <!-- bio 표시 -->
+        <div v-if="user.bio" class="bio mb-4">
+          {{ user.bio }}
+        </div>
+        
         <div class="d-flex">
           <div class="mr-4">
-            <div class="text-h6">{{ posts.length }}</div>
-            <div class="text-caption text-medium-emphasis">포스트</div>
+            <div class="text-h6">{{ postCount }}</div>
+            <div class="text-caption text-grey">포스트</div>
+          </div>
+          <div class="mr-4">
+            <div class="text-h6">{{ repostCount }}</div>
+            <div class="text-caption text-grey">리포스트</div>
+          </div>
+          <div class="mr-4">
+            <div class="text-h6">{{ followerCount }}</div>
+            <div class="text-caption text-grey">팔로워</div>
+          </div>
+          <div>
+            <div class="text-h6">{{ followingCount }}</div>
+            <div class="text-caption text-grey">팔로잉</div>
           </div>
         </div>
       </v-card-text>
@@ -240,6 +281,7 @@ onUnmounted(() => {
         @delete="handleDeletePost"
         @reply="handleReply"
         @repost="handleRepost"
+        class="mb-1"
       />
       <v-alert
         v-if="posts.length === 0"
@@ -250,4 +292,29 @@ onUnmounted(() => {
       </v-alert>
     </div>
   </v-container>
-</template> 
+</template>
+
+<style scoped>
+.bio {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--v-text-primary);
+}
+
+.text-h6 {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.text-caption {
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.posts-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+</style> 
