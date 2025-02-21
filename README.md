@@ -1,3 +1,5 @@
+> 저 혼자 놀려고 만든 것이니, 실제 프로젝트에 사용하지 말 것을 알립니다.
+
 # Sonnect Community
 
 Sonnect Community는 Vue 3와 Firebase를 기반으로 한 실시간 소셜 네트워킹 플랫폼입니다. 사용자들이 생각을 공유하고 소통할 수 있는 공간을 제공합니다.
